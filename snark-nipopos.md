@@ -16,9 +16,9 @@ type Signature = {
 }
   
 
-function snarkCuircuit(
-    gensisBlock: publicVariableBlock[],
-    lastBlock: publicVariableBlock[],
+function snarkCircuit(
+    gensisBlock: publicVariableBlock,
+    lastBlock: publicVariableBlock,
     justifiedBlocks: privateVariableBlock[],
     justifiedBlockSigatures: privateVariableSignature[][],
 ) {
@@ -31,15 +31,33 @@ function snarkCuircuit(
         let currectBlock = justifiedBlocks[i];
         let currentBlockSignatures = justifiedBlockSigatures[i];
         check(currentBlockSignatures.length > (2/3 *  lastBlock.validatorCount)); // O(1)
-        for(int j = 0; j < lastBlock.validatorCount; j++) {
-            let sig = justifiedBlockSigatures[i][j];
+        for(int j = 0; j < currentBlockSignatures.length; j++) {
+            let sig = currentBlockSignatures[j];
             check(sig.b1 === lastBlock.blockHash); // O(1)
             check(sig.b2 === currectBlock.blockHash); // O(1)
             check(blsRecover(sig.signature) === sig.publicKey); // O(1)
             check(generateMerkleRoot(sig.merkleProof, sig.publicKey) === lastBlock.validatorHash); // O(log(V))
         }
     }
- }
+}
+
+function progressiveSnarkCircuit(
+    gensisBlock: publicVariableBlock,
+    newBlock: publicVariableBlock,
+    currentBlock: privateVariableBlock,
+    proofUntilCurrentBlock: privateProof,
+    newJustifiedBlockSigatures: privateVariableSignature[],
+) {
+    check(isProofCorrect(genesisBlock, currentBlock, proofUntilCurrentBlock)); // O(1)
+    check(newJustifiedBlockSigatures.length > (2/3 *  currectBlock.validatorCount)); // O(1)
+    for(int j = 0; j < newJustifiedBlockSigatures.length; j++) {
+        let sig = newJustifiedBlockSigatures[j];
+        check(sig.b1 === currectBlock.blockHash); // O(1)
+        check(sig.b2 === newBlock.blockHash); // O(1)
+        check(blsRecover(sig.signature) === sig.publicKey); // O(1)
+        check(generateMerkleRoot(sig.merkleProof, sig.publicKey) === currectBlock.validatorHash); // O(log(V))
+    }
+}
 ```
 
 
@@ -53,3 +71,4 @@ function snarkCuircuit(
     
     We should test it using Circom (https://github.com/iden3/circomlib/tree/master/circuits)  
     Contact someone who has more experience 
+
