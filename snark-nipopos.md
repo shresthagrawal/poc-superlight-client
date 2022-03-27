@@ -36,7 +36,7 @@ function snarkCuircuit(
             check(sig.b1 === lastBlock.blockHash); // O(1)
             check(sig.b2 === currectBlock.blockHash); // O(1)
             check(blsRecover(sig.signature) === sig.publicKey); // O(1)
-            check(generateMerkleRoot(sig.merkleProof) === block.validatorHash); // O(log(V))
+            check(generateMerkleRoot(sig.merkleProof, sig.publicKey) === lastBlock.validatorHash); // O(log(V))
         }
     }
  }
