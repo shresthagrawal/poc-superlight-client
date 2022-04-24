@@ -1,8 +1,8 @@
 import { digest } from '@chainsafe/as-sha256';
 import { fromHexString, toHexString } from '@chainsafe/ssz';
-import { MerkleMountainRange } from './merkle-mountain-range';
-import { ISyncStore } from './sync-store';
-import { concatUint8Array } from './utils';
+import { MerkleMountainRange } from '../merkle-mountain-range';
+import { concatUint8Array } from '../utils';
+import { ISyncStore } from '../store/isync-store';
 
 export class SuperlightSync<T> {
   protected mmr: MerkleMountainRange;

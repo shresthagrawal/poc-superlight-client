@@ -1,17 +1,10 @@
 import { ssz, altair } from '@chainsafe/lodestar-types';
 import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
 import { defaultChainConfig } from '@chainsafe/lodestar-config';
-import * as SyncUpdatesJson from './data/sync-updates.json';
-import * as GenesisSnapshotJson from './data/genesis-snapshot.json';
+import { ISyncStore } from './isync-store';
+import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
+import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 
-export interface ISyncStore<T> {
-  getAllSyncCommittees(): {
-    startPeriod: number;
-    syncCommittees: Uint8Array[][];
-  };
-  getSyncCommittee(period: number): Uint8Array[];
-  getSyncUpdate(period: number): T;
-}
 
 // TODO: fix types
 export class MainnetBeaconChainStore implements ISyncStore<any> {

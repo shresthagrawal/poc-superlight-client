@@ -1,5 +1,5 @@
 import * as express from 'express';
-import { MainnetBeaconChainStore } from './sync-store'; 
+import { MainnetBeaconChainStore } from '../store/beacon-store'; 
 import { SuperlightSync } from './superlight-sync'; 
 
 const defaultStore = new MainnetBeaconChainStore();
