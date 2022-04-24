@@ -1,0 +1,36 @@
+{
+  "name": "SuperLightClientETHPoS",
+  "version": "1.0.0",
+  "description": "Superligh client implementation for Ethereum PoS",
+  "main": "index.js",
+  "author": "shresthagrawal.31@gmail.com",
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "7.0.4",
+    "lint-staged": "12.4.0",
+    "nodemon": "2.0.15",
+    "prettier": "2.6.2",
+    "typescript": "4.6.3"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development nodemon",
+    "build": "NODE_ENV=production tsc",
+    "start": "NODE_ENV=production && node ./dist"
+  },
+  "dependencies": {
+    "@chainsafe/as-sha256": "0.3.1",
+    "@chainsafe/bls": "6.0.3",
+    "@chainsafe/blst": "0.2.4",
+    "@chainsafe/lodestar-config": "0.34.0",
+    "@chainsafe/lodestar-light-client": "0.34.0",
+    "@chainsafe/lodestar-types": "0.34.0",
+    "@chainsafe/ssz": "0.9.1",
+    "@types/express": "4.17.13",
+    "dotenv": "16.0.0",
+    "express": "4.17.3"
+  },
+  "resolutions": {
+    "@chainsafe/lodestar-types": "0.34.0",
+    "@chainsafe/lodestar-config": "0.34.0"
+  }
+}

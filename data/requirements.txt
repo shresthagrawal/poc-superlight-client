@@ -1,0 +1,4 @@
+aiohttp==3.8.1
+matplotlib==3.4.3
+numpy==1.21.2
+python-dotenv==0.20.0

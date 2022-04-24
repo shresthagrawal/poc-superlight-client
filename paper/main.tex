@@ -1,67 +1,244 @@
-\documentclass[runningheads]{llncs}
+\documentclass[a4paper,11pt,oneside]{article}
+
+% To use this template, you have to have a halfway complete LaTeX
+% installation and you have to run pdflatex, followed by bibtex,
+% following by one-two more pdflatex runs.
 %
-\usepackage{graphicx}
-% \renewcommand\UrlFont{\color{blue}\rmfamily}
+% Note thad usimg a spel chequer (e.g. ispell, aspell) is generolz
+% a very guud ideo.
+
+\usepackage[utf8]{inputenc}
+\usepackage[a4paper,top=3cm,bottom=3cm,left=3cm,right=3cm]{geometry}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{helvet}
+\usepackage[english]{babel}     %% typographie franÃ§aise
+\usepackage[style=numeric,language=english]{biblatex}
+\usepackage{parskip}        %% blank lines between paragraphs, no indent
+\usepackage[margin=1cm]{caption}%% give long captions a margin
+\usepackage{booktabs}           %% typesetting nice tables
+\usepackage[pdftex]{graphicx}   %% include graphics, preferrably pdf
+\usepackage[pdftex]{hyperref}   %% many PDF options can be set here
+\pdfadjustspacing=1     %% force LaTeX-like character spacing
+
+\newcommand{\mylastname}{Agrawal}
+\newcommand{\myfirstname}{Shresth}
+\newcommand{\mynumber}{30002701}
+\newcommand{\myname}{\myfirstname{} \mylastname{}}
+\newcommand{\mytitle}{Super Light Clients for Ethereum Proof of Stake}
+\newcommand{\myresearchsupervisor}{Dionysis Zindros}
+\newcommand{\myinternalsupervisor}{Soren Petrat}
+
+\hypersetup{
+  pdfauthor = {\myname},
+  pdftitle = {\mytitle},
+  pdfkeywords = {},
+  colorlinks = {true},
+  linkcolor = {blue}
+}
+
+\addbibresource{refs.bib}
 
 \begin{document}
-%
-\title{Super Light Clients for ETH2}
-\author{Shresth Agrawal\inst{1} \\ {\small Advisor: Dionysis Zindros\inst{2} \and Sören Petrat\inst{1}}}
-%
-\institute{Jacobs University Bremen \and Stanford University}
-%
-\maketitle
-%
-\begin{abstract}
-Currently all of the self custody Ethereum wallets that run on browser or smart phone rely on single RPC full-node to get the state of the blockchain. These full-nodes can behave maliciously or get hacked. Due to the limitation of storage and bandwidth, running full-nodes or even light clients is not possible on such wallets. There already exists constructions for verifying Proof of Stake is sub-linear complexity. These constructions use interactive bisection games between the nodes to quickly sync with the latest state of the network. In this paper we propose a similar constructions specifically tailored for ETH2. 
-\end{abstract}
-%
-%
-%
-\section{Introduction}
-Goals and Settings
+  \pagenumbering{roman}
 
-\section{Background}
+  \thispagestyle{empty}
 
-\subsection{Blockchain}
-\begin{description}
-\item What are blockchains and why are they special 
-\item Introduction of Bitcoin and Proof of Work
-\end{description}
+  \begin{flushright}
+    \includegraphics[scale=0.8]{bsc-logo}
+  \end{flushright}
+  \vspace*{40mm}
+  \begin{center}
+    \huge
+    \textbf{\mytitle}
+  \end{center}
+  \vspace*{4mm}
+  \begin{center}
+   \Large by
+  \end{center}
+  \vspace*{4mm}
+  \begin{center}
+    \LARGE
+    \textbf{\myname}
+  \end{center}
+  \vspace*{20mm}
+  \begin{center}
+    \Large
+    Bachelor Thesis in Computer Science
+  \end{center}
+  \vfill
+  \begin{flushleft}
+    \large
+    Submission: \today \hfill \\
+    Research Supervisor: \myresearchsupervisor \\
+    Internal Supervisor: \myinternalsupervisor \\
+    \rule{\textwidth}{1pt}
+  \end{flushleft}
+  \begin{center}
+    Jacobs University Bremen $|$ Department of Computer Science and Electrical Engineering
+  \end{center}
 
-\subsection{ETH}
-\begin{description}
-\item Current Ethereum, its high adoptions
-\item Centralization of Ethereum wallets
-\item Transition to ETH2 PoS
-\end{description}
+  \newpage
+  \thispagestyle{empty}
 
-\subsection{Proof of Stake}
-Overview of components of proof of stake systems.
+  \begin{center}
+    \Large \textbf{Statutory Declaration}
+    \vspace*{8mm}
+  \end{center}
 
-\subsection{ETH2}
-ETH2 is the upcomming version of ETH1 which uses PoS. ETH2 merges two consensus protocols.
-\subsubsection{Time}
-Blocks, Epochs, etc
-\subsubsection{Casper FFG}
-Used for Finality. \cite{CasperFFG}
+  \begin{center}
+    \begin{tabular}{|l|p{85mm}|}
+      \hline
+      Family Name, Given/First Name & \mylastname, \myfirstname \\
+      Matriculation number & \mynumber \\
+      Kind of thesis submitted & Bachelor Thesis \\
+      \hline
+    \end{tabular}
+    \vspace*{8mm}
+  \end{center}
 
-\subsubsection{LMD GHOST}
-Secure only under good network conditions. \cite{Gasper}
+  \subsection*{English: Declaration of Authorship}
+ 
+  I hereby declare that the thesis submitted was created and written
+  solely by myself without any external support. Any sources, direct
+  or indirect, are marked as such. I am aware of the fact that the
+  contents of the thesis in digital form may be revised with regard to
+  usage of unauthorized aid as well as whether the whole or parts of
+  it may be identified as plagiarism. I do agree my work to be entered
+  into a database for it to be compared with existing sources, where
+  it will remain in order to enable further comparisons with future
+  theses. This does not grant any rights of reproduction and usage,
+  however.
 
-\subsection{PoPoS}
-Smartly uses bisection games to fast sync \cite{PoPos}
+  This document was neither presented to any other examination board
+  nor has it been published.
 
-\subsubsection{Bisection Game}
-Interactive games using Merkle Trees
+  \subsection*{German: ErklÃ¤rung der Autorenschaft (Urheberschaft)}
+ 
+  Ich erklÃ¤re hiermit, dass die vorliegende Arbeit ohne fremde Hilfe
+  ausschlieÃŸlich von mir erstellt und geschrieben worden ist. Jedwede
+  verwendeten Quellen, direkter oder indirekter Art, sind als solche
+  kenntlich gemacht worden. Mir ist die Tatsache bewusst, dass der
+  Inhalt der Thesis in digitaler Form geprÃ¼ft werden kann im Hinblick
+  darauf, ob es sich ganz oder in Teilen um ein Plagiat handelt. Ich
+  bin damit einverstanden, dass meine Arbeit in einer Datenbank
+  eingegeben werden kann, um mit bereits bestehenden Quellen
+  verglichen zu werden und dort auch verbleibt, um mit zukÃ¼nftigen
+  Arbeiten verglichen werden zu kÃ¶nnen. Dies berechtigt jedoch nicht
+  zur Verwendung oder VervielfÃ¤ltigung.
 
-\section{Construction}
-Build PoPoS on ETH2 
+  Diese Arbeit wurde noch keiner anderen PrÃ¼fungsbehÃ¶rde vorgelegt
+  noch wurde sie bisher verÃ¶ffentlicht.
 
-\section{Experiments}
-\section{Conclusion}
-\subsection{Future Work}
+  \vspace{20mm}
 
-\bibliographystyle{splncs04}
-\bibliography{refs}
+  \dotfill\\
+  Date, Signature
+
+  \newpage
+
+  \section*{Abstract}
+  Blockchains are decentralised, trust-less and cryptographically secure ledger.  Ethereum is one of the most adopted Blockchains which allows for smart contract execution. The most common way to interact with Ethereum is through wallet applications. These wallet applications run on consumer hardware like PC, Browser or Smartphone. Such devices are constrained in storage and network bandwidth, hence the wallets don't actively participate in the consensus of the blockchain.  Instead they rely on external full-node service provider to get the state of the blockchain. This is counter intuitive to the principal of decentralization as these full-node service providers can behave maliciously or get hacked. There already exists constructions for verifying Proof of Stake is sub-linear complexity. These constructions use interactive bisection games between the nodes to quickly sync with the latest state of the network. In this paper we propose a similar constructions specifically tailored for ETH2 using Sync Committee.
+
+  \newpage
+  \tableofcontents
+
+  \clearpage
+  \pagenumbering{arabic}
+
+  \section{Introduction}
+%   This, like the rest, addresses fellow experts from your field (but
+%   not from your particular topic of research). Here you should
+%   technically connect to the main concepts from that field and give an
+%   outline of your project, stating the research/engineering question
+%   that you want to get answered by your project.
+
+%   (target size: 1-2 pages)
+ 
+  
+
+  \section{Statement and Motivation of Research}
+
+  This part should make clear which question, exactly, you are
+  pursuing, and why your project is relevant/interesting. This is the
+  place to explain the background and to review the existing
+  literature. Where does your project extend the state of the art?
+  What weaknesses in known approaches do you hope to overcome? If you
+  have carried out preliminary experiments, describe them here.
+
+  (target size: 5-10 pages)
+  
+  \subsection{Proof of Stake}
+  Overview of components of proof of stake systems.
+    
+  \subsection{ETH2}
+  ETH2 is the upcomming version of ETH1 which uses PoS. ETH2 merges two consensus protocols Casper FFG and LMD Ghost.
+  \subsubsection{Time}
+  Blocks, Epochs, etc
+  \subsubsection{Casper FFG}
+  Used for Finality. \cite{CasperFFG}
+    
+  \subsubsection{LMD GHOST}
+  Secure only under good network conditions. \cite{Gasper}
+    
+  \subsection{PoPoS}
+  Smartly uses bisection games to fast sync \cite{PoPos}
+    
+  \subsubsection{Bisection Game}
+  Interactive games using Merkle Trees
+
+  \section{Description of the Investigation}
+
+  This is the technical core of the thesis. Here you lay out your how
+  you answered your research question, you specify your design of
+  experiments or simulations, point out difficulties that you
+  encountered, etc.
+
+  (target size: 5-10 pages)
+
+  \section{Evaluation of the Investigation}
+
+  This section discusses criteria that are used to evaluate the
+  research results. Make sure your results can be used to published
+  research results, i.e., to the already known state-of-the-art.
+
+  (target size: 5-10 pages)
+
+  \begin{table}[ht]
+    \begin{center}
+      \begin{tabular}{cl}
+        \toprule
+        Number & Description \\
+        \midrule
+        7 & A lucky number in Western culture \\
+        8 & A lucky number in Chinese and other Asian cultures \\
+        42 & Answer to the ultimate question of life, the universe, and everything \\
+        404 & Not found \\
+        \bottomrule
+      \end{tabular}
+      \caption{Useless insights I gained with no further meaning}
+    \end{center}
+  \end{table}
+  
+  \begin{figure}[ht]
+    \begin{center}
+      \includegraphics[width=.8\textwidth]{bsc-plot}
+    \end{center}
+    \caption{Many dots distributed over a two dimensional unit space
+      without any discernible pattern or deeper meaning}
+  \end{figure}
+
+  \section{Conclusions}
+
+  Summarize the main aspects and results of the research
+  project. Provide an answer to the research questions stated earlier.
+
+  (target size: 1/2 page)
+
+  \nocite{JS06}
+
+  \newpage
+%   \bibliographystyle{unsrt}
+%   \bibliography{bsc-sample}
+  \printbibliography
+
 \end{document}
