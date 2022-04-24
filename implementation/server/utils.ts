@@ -1,7 +1,7 @@
 import { toHexString } from '@chainsafe/ssz';
 
 export function logFloor(x: number, base: number = 2) {
-  return Math.floor(Math.log(x) / Math.floor(base));
+  return Math.floor(Math.log(x) / Math.log(base));
 }
 
 export function concatUint8Array(data: Uint8Array[]) {

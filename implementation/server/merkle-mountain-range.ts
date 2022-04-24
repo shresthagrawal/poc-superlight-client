@@ -22,7 +22,7 @@ export class MerkleMountainRange {
     while (leftL > 0) {
       const merkleTree = new MerkleTree(this.hashFn, this.n); 
       const possibleTreeL = this.n ** logFloor(leftL, this.n);
-      merkleTree.init(leaves.slice(l - leftL, possibleTreeL));
+      merkleTree.init(leaves.slice(l - leftL, l - leftL + possibleTreeL));
       const root = merkleTree.getRoot();
       this.merkleTrees.push(merkleTree);
       rootHashes.push(root.hash);
@@ -47,7 +47,7 @@ export class MerkleMountainRange {
   generateProof(index: number): { rootHash: Uint8Array, proof: Uint8Array[][]} {
     let i = index;
     for(let t of this.merkleTrees) {
-      if (t.size < i) 
+      if (t.size <= i) 
         i -= t.size;
       else {
         return {

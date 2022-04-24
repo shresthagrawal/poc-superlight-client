@@ -12,7 +12,7 @@ export class SuperlightSync<T> {
   constructor(protected store: ISyncStore<T>, n = 2) {
     const { startPeriod, syncCommittees } = store.getAllSyncCommittees();
     this.startPeriod = startPeriod;
-    this.latestPeriod = startPeriod + syncCommittees.length;
+    this.latestPeriod = startPeriod + syncCommittees.length - 1;
     this.mmr = new MerkleMountainRange(digest, n);
     const leaves = syncCommittees.map(c => digest(concatUint8Array(c)));
     this.mmr.init(leaves);
