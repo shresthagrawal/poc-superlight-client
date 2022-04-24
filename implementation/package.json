@@ -14,6 +14,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development nodemon",
+    "pretty": "prettier --write .",
     "build": "NODE_ENV=production tsc",
     "start": "NODE_ENV=production && node ./dist"
   },

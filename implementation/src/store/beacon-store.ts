@@ -5,7 +5,6 @@ import { ISyncStore } from './isync-store';
 import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 
-
 // TODO: fix types
 export class MainnetBeaconChainStore implements ISyncStore<any> {
   startPeriod: number;

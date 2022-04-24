@@ -1,4 +1,3 @@
-
 export interface ISyncStore<T> {
   getAllSyncCommittees(): {
     startPeriod: number;

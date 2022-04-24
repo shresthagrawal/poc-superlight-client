@@ -4,7 +4,6 @@ dotenv.config();
 import * as http from 'http';
 import getApp from './server';
 
-
 const PORT = process.env.PORT || '3679';
 
 function handleErrors() {
