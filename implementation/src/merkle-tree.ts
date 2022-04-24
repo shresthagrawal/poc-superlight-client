@@ -88,10 +88,18 @@ export class MerkleTree {
   }
 }
 
-export function MerkleVerify(
+export function merkleVerify(
   leaf: Uint8Array,
   index: number,
   root: Uint8Array,
   proof: Uint8Array[][],
+  hashFn: HashFunction,
   n: number = 2,
-) {}
+): boolean {
+  let value = leaf;
+  for (let i = 0; i < proof.length; i++) {
+    const pos = Math.floor(index / n ** i) % n;
+    value = hashFn(concatUint8Array(proof[i].splice(pos, 0, value)));
+  }
+  return isUint8ArrayEq(value, root);
+}

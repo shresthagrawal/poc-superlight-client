@@ -1,10 +1,10 @@
 import { digest } from '@chainsafe/as-sha256';
-import { fromHexString, toHexString } from '@chainsafe/ssz';
+import { ISuperlightProver } from './isuperlight-prover';
 import { MerkleMountainRange } from '../merkle-mountain-range';
 import { concatUint8Array } from '../utils';
 import { ISyncStore } from '../store/isync-store';
 
-export class SuperlightSync<T> {
+export class SuperlightSync<T> implements ISuperlightProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   latestPeriod: number;
@@ -19,44 +19,39 @@ export class SuperlightSync<T> {
   }
 
   getLeafWithProof(period: number | 'latest'): {
-    syncCommittee: string[];
-    root: string;
-    proof: string[][];
+    syncCommittee: Uint8Array[];
+    rootHash: Uint8Array;
+    proof: Uint8Array[][];
   } {
     if (period === 'latest') period = this.latestPeriod;
     const syncCommittee = this.store.getSyncCommittee(period);
     const mmrIndex = period - this.startPeriod;
     const { rootHash, proof } = this.mmr.generateProof(mmrIndex);
     return {
-      syncCommittee: syncCommittee.map(toHexString),
-      root: toHexString(rootHash),
-      proof: proof.map(l => l.map(toHexString)),
+      syncCommittee,
+      root,
+      proof,
     };
   }
 
-  getMMRInfo(): { root: string; trees: { root: string; size: number }[] } {
+  getMMRInfo(): { rootHash: Uint8Array; treeInfos: { root: Uint8Array; size: number }[] } {
     const rootHash = this.mmr.getRootHash();
-    const treeInfo = this.mmr.getTreeInfo();
+    const treeInfos = this.mmr.getTreeInfo();
     return {
-      root: toHexString(rootHash),
-      trees: treeInfo.map(i => ({
-        root: toHexString(i.rootHash),
-        size: i.size,
-      })),
+      rootHash,
+      treesInfos,
     };
   }
 
   getNode(
-    treeRootHex: string,
-    nodeHashHex: string,
-  ): { isLeaf: boolean; children?: string[] } {
-    const treeRoot = fromHexString(treeRootHex);
-    const nodeHash = fromHexString(nodeHashHex);
+    treeRoot: Uint8Array,
+    nodeHash: Uint8Array,
+  ): { isLeaf: boolean; children?: Uint8Array[] } {
     const tree = this.mmr.getTree(treeRoot);
     const node = tree.getNode(nodeHash);
     return {
       isLeaf: node.isLeaf,
-      children: node.children && node.children.map(c => toHexString(c.hash)),
+      children: node.children,
     };
   }
 

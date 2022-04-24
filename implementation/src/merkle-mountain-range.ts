@@ -60,3 +60,11 @@ export class MerkleMountainRange {
     throw new Error('index out of range');
   }
 }
+
+export function merkleMountainVerify(
+  root: Uint8Array,
+  treeRoots: Uint8Array[],
+  hashFn: HashFunction 
+): boolean {
+  return isUint8ArrayEq(root, hashFn(concatUint8Array(treeRoots)));
+}

@@ -1,7 +1,11 @@
 import { ssz, altair } from '@chainsafe/lodestar-types';
+import { defaultChainConfig, createIBeaconConfig } from '@chainsafe/lodestar-config';
+import { PublicKey } from "@chainsafe/bls";
 import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
-import { defaultChainConfig } from '@chainsafe/lodestar-config';
+import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
+import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
 import { ISyncStore } from './isync-store';
+import { BEACON_GENESIS_ROOT } from './constants';
 import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 
@@ -59,4 +63,38 @@ export class MainnetBeaconChainStore implements ISyncStore<any> {
       );
     return this.syncUpdates[index];
   }
+}
+
+function deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
+  return pubkeys.map(pk => PublicKey.fromBytes(pk));
+}
+
+// This function is ovveride of the original function in 
+// @chainsafe/lodestar-light-client/lib/utils/utils
+// this was required as the light client doesn't have access 
+// to aggregated signatures
+function deserializeSyncCommittee(syncCommittee: Uint8Array[]): SyncCommitteeFast {
+  const pubkeys = deserializePubkeys(syncCommittee.pubkeys);
+  return {
+    pubkeys,
+    aggregatePubkey: PublicKey.aggregate(pubkeys),
+  };
+}
+
+// TODO: fix types
+export function beaconSyncUpdateVerify(syncCommittee: Uint8Array[], update: any): boolean {
+  const beaconConfig = createIBeaconConfig(defaultChainConfig, BEACON_GENESIS_ROOT);
+  const syncCommitteeFast = deserializeSyncCommittee(syncCommittee);
+  try {
+    assertValidLightClientUpdate(beaconConfig, syncCommitteeFast, update);
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
+
+export function getBeaconGenesisSyncCommittee(): Uint8Array[] {
+  const genesisSnapshot =
+    ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
+  return Array.from(genesisSnapshot.currentSyncCommittee.pubkeys) as Uint8Array[];
 }

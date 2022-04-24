@@ -8,3 +8,5 @@ export interface ISyncStore<T> {
 
   getSyncUpdate(period: number): T;
 }
+
+export type ISyncUpdateVerify<T> = (syncCommittee: Uint8Array[], update: T) => boolean;
