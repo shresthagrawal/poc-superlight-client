@@ -4,7 +4,7 @@ import { MerkleMountainRange, Peaks } from '../merkle-mountain-range';
 import { concatUint8Array } from '../utils';
 import { ISyncStoreProver } from '../store/isync-store';
 
-export class SuperlightSync<T> implements ISuperlightProver<T> {
+export class SuperlightProver<T> implements ISuperlightProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   latestPeriod: number;

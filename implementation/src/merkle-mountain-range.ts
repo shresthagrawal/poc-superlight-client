@@ -76,7 +76,6 @@ export class MerkleMountainVerify {
     }
 
     if (i !== peaks.length) return false;
-
     return isUint8ArrayEq(
       root,
       this.hashFn(concatUint8Array(peaks.map(i => i.rootHash))),

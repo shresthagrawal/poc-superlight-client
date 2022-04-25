@@ -22,12 +22,17 @@ const currentBeaconPeriod = computeSyncPeriodAtSlot(
 // TODO: fix types
 type BeaconUpdate = any;
 
-export class BeaconChainStoreProver implements ISyncStoreProver<BeaconUpdate> {
+export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   startPeriod: number;
   syncUpdates: altair.LightClientUpdate[];
   syncCommittees: Uint8Array[][];
 
   constructor(
+    // This is required for testing purpose to make dishonest clients
+    override: {
+      committee: Uint8Array[],
+      index: number
+    }[] = [],
     syncUpdatesJson: any[] = SyncUpdatesJson,
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
@@ -51,6 +56,14 @@ export class BeaconChainStoreProver implements ISyncStoreProver<BeaconUpdate> {
         .slice(0, -1)
         .map(u => Array.from(u.nextSyncCommittee.pubkeys) as Uint8Array[]),
     ];
+
+    override.forEach(({committee, index}) => {
+      this.syncCommittees[index] = committee;
+      this.syncUpdates[index - 1].nextSyncCommittee = {
+        pubkeys: committee,
+        aggregatePubkey: PublicKey.aggregate(committee.map(c => PublicKey.fromBytes(c))).toBytes()
+      };
+    });
   }
 
   getAllSyncCommittees(): {
@@ -83,7 +96,7 @@ export class BeaconChainStoreProver implements ISyncStoreProver<BeaconUpdate> {
 }
 
 // TODO: fix types
-export class BeaconChainStoreClient implements ISyncStoreVerifer<BeaconUpdate> {
+export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
   beaconConfig: IBeaconConfig;
   genesisSyncCommittee: Uint8Array[];
   genesisPeriod: number;
@@ -133,7 +146,7 @@ export class BeaconChainStoreClient implements ISyncStoreVerifer<BeaconUpdate> {
     update: BeaconUpdate,
   ): boolean {
     // check if update.nextSyncCommittee is currentCommittee
-    const isUpdateValid = update.nextSyncCommittee.every(
+    const isUpdateValid = update.nextSyncCommittee.pubkeys.every(
       (c: Uint8Array, i: number) =>
       isUint8ArrayEq(currentCommittee[i], c),
     );

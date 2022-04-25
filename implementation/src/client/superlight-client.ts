@@ -12,14 +12,13 @@ export type ProverInfo = {
   index: number 
 }
 
-export class SuperlightSync<T> {
+export class SuperlightClient<T> {
   merkleVerify: MerkleVerify;
   merkleMountainVerify: MerkleMountainVerify;
 
   constructor(
-    genesisSyncCommittee: Uint8Array[],
-    protected provers: ISuperlightProver<T>[],
     protected store: ISyncStoreVerifer<T>,
+    protected provers: ISuperlightProver<T>[],
     protected n: number = 2,
   ) {
     this.merkleVerify = new MerkleVerify(digest, n);
@@ -117,7 +116,7 @@ export class SuperlightSync<T> {
       // find the first point of disagreement
       for (let i = 0; i < this.n; i++) {
         if (!isUint8ArrayEq(children1[i], children2[i])) {
-          return this.treeVsTree(
+          return await this.treeVsTree(
             prover1,
             prover2,
             tree1,
@@ -166,7 +165,7 @@ export class SuperlightSync<T> {
         // winners simply add it to list of winners
         winners.push(currProver);
       } else {
-        const areCurrentWinnersHonest = this.peaksVsPeaks(
+        const areCurrentWinnersHonest = await this.peaksVsPeaks(
           this.provers[currWinner.index],
           this.provers[currProver.index],
           currWinner.peaks,
@@ -185,7 +184,7 @@ export class SuperlightSync<T> {
     // get the tree size by currentPeriod - genesisPeriod
     const currentPeriod = this.store.getCurrentPeriod();
     const genesisPeriod = this.store.getGenesisPeriod();
-    const mmrSize = currentPeriod - genesisPeriod;
+    const mmrSize = currentPeriod - genesisPeriod + 1;
 
     const validProverInfos = [];
     for (let i = 0; i < this.provers.length; i++) {
@@ -198,7 +197,7 @@ export class SuperlightSync<T> {
       const { syncCommittee, proof } = await prover.getLeafWithProof('latest');
       const leafHash = digest(concatUint8Array(syncCommittee));
       const lastPeak = mmrInfo.peaks[mmrInfo.peaks.length - 1];
-      const isSyncValid = this.merkleVerify.verify(leafHash, mmrSize - 1, lastPeak.rootHash, proof);
+      const isSyncValid = this.merkleVerify.verify(leafHash, lastPeak.size - 1, lastPeak.rootHash, proof);
       if(!isSyncValid)
         continue;
 

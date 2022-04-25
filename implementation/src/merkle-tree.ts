@@ -66,7 +66,7 @@ export class MerkleTree {
     if (!curr) throw new Error('index out of range');
     while (!curr.isRoot && curr.parent) {
       const siblings = curr.parent.children!.filter(n =>
-        isUint8ArrayEq(n.hash, curr.hash),
+        !isUint8ArrayEq(n.hash, curr.hash),
       );
       result.push(siblings.map(s => s.hash));
       curr = curr.parent;
@@ -100,7 +100,11 @@ export class MerkleVerify {
     let value = leaf;
     for (let i = 0; i < proof.length; i++) {
       const pos = Math.floor(index / this.n ** i) % this.n;
-      value = this.hashFn(concatUint8Array(proof[i].splice(pos, 0, value)));
+      // copy proof to avoid modification of original array
+      const children = [...proof[i]];
+      // insert the value at the correct position
+      children.splice(pos, 0, value);
+      value = this.hashFn(concatUint8Array(children));
     }
     return isUint8ArrayEq(value, root);
   }
