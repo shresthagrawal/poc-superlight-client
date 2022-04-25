@@ -1,9 +1,9 @@
 import * as express from 'express';
-import { MainnetBeaconChainStore } from '../store/beacon-store';
+import { BeaconChainStoreProver } from '../store/beacon-store';
 import { SuperlightSync } from './superlight-sync';
 import { fromHexString, toHexString } from '@chainsafe/ssz';
 
-const defaultStore = new MainnetBeaconChainStore();
+const defaultStore = new BeaconChainStoreProver();
 const superlighSync = new SuperlightSync(defaultStore);
 
 export default function getApp() {

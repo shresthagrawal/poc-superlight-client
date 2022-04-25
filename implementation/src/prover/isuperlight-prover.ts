@@ -1,4 +1,5 @@
 import { AsyncOrSync } from 'ts-essentials';
+import { Peaks } from '../merkle-mountain-range';
 
 export interface ISuperlightProver<T> {
   getLeafWithProof(period: number | 'latest'): AsyncOrSync<{
@@ -7,7 +8,10 @@ export interface ISuperlightProver<T> {
     proof: Uint8Array[][];
   }>;
 
-  getMMRInfo(): AsyncOrSync<{ rootHash: Uint8Array; treeInfos: { root: Uint8Array; size: number }[] }>;
+  getMMRInfo(): AsyncOrSync<{
+    rootHash: Uint8Array;
+    peaks: Peaks;
+  }>;
 
   getNode(
     treeRoot: Uint8Array,

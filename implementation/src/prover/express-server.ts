@@ -2,7 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import * as http from 'http';
-import getApp from './server';
+import getApp from './express-router';
 
 const PORT = process.env.PORT || '3679';
 

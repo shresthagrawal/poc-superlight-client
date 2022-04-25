@@ -1,5 +1,5 @@
 import { MerkleTree, HashFunction } from './merkle-tree';
-import { logFloor, concatUint8Array } from './utils';
+import { logFloor, concatUint8Array, isUint8ArrayEq } from './utils';
 import { toHexString } from '@chainsafe/ssz';
 
 export class MerkleMountainRange {
@@ -36,7 +36,7 @@ export class MerkleMountainRange {
     return this.rootHash;
   }
 
-  getTreeInfo(): { rootHash: Uint8Array; size: number }[] {
+  getPeaks(): Peaks {
     return this.merkleTrees.map(t => ({
       rootHash: t.getRoot().hash,
       size: t.size,
@@ -61,10 +61,25 @@ export class MerkleMountainRange {
   }
 }
 
-export function merkleMountainVerify(
-  root: Uint8Array,
-  treeRoots: Uint8Array[],
-  hashFn: HashFunction 
-): boolean {
-  return isUint8ArrayEq(root, hashFn(concatUint8Array(treeRoots)));
+export type Peaks = { rootHash: Uint8Array; size: number }[];
+
+export class MerkleMountainVerify {
+  constructor(protected hashFn: HashFunction, protected n: number = 2) {}
+
+  verify(root: Uint8Array, peaks: Peaks, size: number): boolean {
+    let leftL = size;
+    let i = 0;
+    while (leftL > 0) {
+      const possibleTreeL = this.n ** logFloor(leftL, this.n);
+      if (peaks[i++].size !== possibleTreeL) return false;
+      leftL -= possibleTreeL;
+    }
+
+    if (i !== peaks.length) return false;
+
+    return isUint8ArrayEq(
+      root,
+      this.hashFn(concatUint8Array(peaks.map(i => i.rootHash))),
+    );
+  }
 }

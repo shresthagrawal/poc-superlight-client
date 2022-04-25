@@ -1,4 +1,4 @@
-export interface ISyncStore<T> {
+export interface ISyncStoreProver<T> {
   getAllSyncCommittees(): {
     startPeriod: number;
     syncCommittees: Uint8Array[][];
@@ -9,4 +9,16 @@ export interface ISyncStore<T> {
   getSyncUpdate(period: number): T;
 }
 
-export type ISyncUpdateVerify<T> = (syncCommittee: Uint8Array[], update: T) => boolean;
+export interface ISyncStoreVerifer<T> {
+  syncUpdateVerify(
+    prevCommittee: Uint8Array[],
+    currentCommittee: Uint8Array[],
+    update: T,
+  ): boolean;
+
+  getGenesisSyncCommittee(): Uint8Array[];
+
+  getCurrentPeriod(): number;
+
+  getGenesisPeriod(): number;
+}

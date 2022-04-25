@@ -1,16 +1,28 @@
 import { ssz, altair } from '@chainsafe/lodestar-types';
-import { defaultChainConfig, createIBeaconConfig } from '@chainsafe/lodestar-config';
-import { PublicKey } from "@chainsafe/bls";
+import {
+  defaultChainConfig,
+  createIBeaconConfig,
+  IBeaconConfig,
+} from '@chainsafe/lodestar-config';
+import { PublicKey } from '@chainsafe/bls';
 import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
 import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
 import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
-import { ISyncStore } from './isync-store';
+import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
 import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
+import { isUint8ArrayEq } from '../utils';
+
+const currentBeaconPeriod = computeSyncPeriodAtSlot(
+  defaultChainConfig,
+  parseInt(SyncUpdatesJson[SyncUpdatesJson.length - 1].header.slot),
+);
 
 // TODO: fix types
-export class MainnetBeaconChainStore implements ISyncStore<any> {
+type BeaconUpdate = any;
+
+export class BeaconChainStoreProver implements ISyncStoreProver<BeaconUpdate> {
   startPeriod: number;
   syncUpdates: altair.LightClientUpdate[];
   syncCommittees: Uint8Array[][];
@@ -28,11 +40,16 @@ export class MainnetBeaconChainStore implements ISyncStore<any> {
       defaultChainConfig,
       genesisSnapshot.header.slot,
     );
+
+    // The nextSyncCommittee from the last update is not considered
+    // as that is the sync committee in the upcomming period
+    // The current/latest SyncCommittee is one in nextSyncCommittee
+    // of the second last updates
     this.syncCommittees = [
       Array.from(genesisSnapshot.currentSyncCommittee.pubkeys) as Uint8Array[],
-      ...this.syncUpdates.map(
-        u => Array.from(u.nextSyncCommittee.pubkeys) as Uint8Array[],
-      ),
+      ...this.syncUpdates
+        .slice(0, -1)
+        .map(u => Array.from(u.nextSyncCommittee.pubkeys) as Uint8Array[]),
     ];
   }
 
@@ -65,36 +82,86 @@ export class MainnetBeaconChainStore implements ISyncStore<any> {
   }
 }
 
-function deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
-  return pubkeys.map(pk => PublicKey.fromBytes(pk));
-}
-
-// This function is ovveride of the original function in 
-// @chainsafe/lodestar-light-client/lib/utils/utils
-// this was required as the light client doesn't have access 
-// to aggregated signatures
-function deserializeSyncCommittee(syncCommittee: Uint8Array[]): SyncCommitteeFast {
-  const pubkeys = deserializePubkeys(syncCommittee.pubkeys);
-  return {
-    pubkeys,
-    aggregatePubkey: PublicKey.aggregate(pubkeys),
-  };
-}
-
 // TODO: fix types
-export function beaconSyncUpdateVerify(syncCommittee: Uint8Array[], update: any): boolean {
-  const beaconConfig = createIBeaconConfig(defaultChainConfig, BEACON_GENESIS_ROOT);
-  const syncCommitteeFast = deserializeSyncCommittee(syncCommittee);
-  try {
-    assertValidLightClientUpdate(beaconConfig, syncCommitteeFast, update);
-    return true;
-  } catch(e) {
-    return false;
-  }
-}
+export class BeaconChainStoreClient implements ISyncStoreVerifer<BeaconUpdate> {
+  beaconConfig: IBeaconConfig;
+  genesisSyncCommittee: Uint8Array[];
+  genesisPeriod: number;
 
-export function getBeaconGenesisSyncCommittee(): Uint8Array[] {
-  const genesisSnapshot =
-    ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
-  return Array.from(genesisSnapshot.currentSyncCommittee.pubkeys) as Uint8Array[];
+  constructor(
+    protected currentPeriod = currentBeaconPeriod,
+    genesisSnapshotJson: any = GenesisSnapshotJson,
+  ) {
+    this.beaconConfig = createIBeaconConfig(
+      defaultChainConfig,
+      BEACON_GENESIS_ROOT,
+    );
+
+    const genesisSnapshot =
+      ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
+    this.genesisSyncCommittee = Array.from(
+      genesisSnapshot.currentSyncCommittee.pubkeys,
+    ) as Uint8Array[];
+
+    this.genesisPeriod = computeSyncPeriodAtSlot(
+      defaultChainConfig,
+      genesisSnapshot.header.slot,
+    );
+  }
+
+  private deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
+    return pubkeys.map(pk => PublicKey.fromBytes(pk));
+  }
+
+  // This function is ovveride of the original function in
+  // @chainsafe/lodestar-light-client/lib/utils/utils
+  // this was required as the light client doesn't have access
+  // to aggregated signatures
+  private deserializeSyncCommittee(
+    syncCommittee: Uint8Array[],
+  ): SyncCommitteeFast {
+    const pubkeys = this.deserializePubkeys(syncCommittee);
+    return {
+      pubkeys,
+      aggregatePubkey: PublicKey.aggregate(pubkeys),
+    };
+  }
+
+  syncUpdateVerify(
+    prevCommittee: Uint8Array[],
+    currentCommittee: Uint8Array[],
+    update: BeaconUpdate,
+  ): boolean {
+    // check if update.nextSyncCommittee is currentCommittee
+    const isUpdateValid = update.nextSyncCommittee.every(
+      (c: Uint8Array, i: number) =>
+      isUint8ArrayEq(currentCommittee[i], c),
+    );
+    if (!isUpdateValid) return false;
+
+    const prevCommitteeFast = this.deserializeSyncCommittee(prevCommittee);
+    try {
+      // check if the update has valid signatures
+      assertValidLightClientUpdate(
+        this.beaconConfig,
+        prevCommitteeFast,
+        update,
+      );
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  getGenesisSyncCommittee(): Uint8Array[] {
+    return this.genesisSyncCommittee;
+  }
+
+  getCurrentPeriod(): number {
+    return this.currentPeriod;
+  }
+
+  getGenesisPeriod(): number {
+    return this.genesisPeriod;
+  }
 }

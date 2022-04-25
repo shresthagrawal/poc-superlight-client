@@ -1,19 +1,20 @@
 import { digest } from '@chainsafe/as-sha256';
 import { ISuperlightProver } from './isuperlight-prover';
-import { MerkleMountainRange } from '../merkle-mountain-range';
+import { MerkleMountainRange, Peaks } from '../merkle-mountain-range';
 import { concatUint8Array } from '../utils';
-import { ISyncStore } from '../store/isync-store';
+import { ISyncStoreProver } from '../store/isync-store';
 
 export class SuperlightSync<T> implements ISuperlightProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   latestPeriod: number;
 
-  constructor(protected store: ISyncStore<T>, n = 2) {
+  constructor(protected store: ISyncStoreProver<T>, n = 2) {
+    this.mmr = new MerkleMountainRange(digest, n);
+
     const { startPeriod, syncCommittees } = store.getAllSyncCommittees();
     this.startPeriod = startPeriod;
     this.latestPeriod = startPeriod + syncCommittees.length - 1;
-    this.mmr = new MerkleMountainRange(digest, n);
     const leaves = syncCommittees.map(c => digest(concatUint8Array(c)));
     this.mmr.init(leaves);
   }
@@ -29,17 +30,20 @@ export class SuperlightSync<T> implements ISuperlightProver<T> {
     const { rootHash, proof } = this.mmr.generateProof(mmrIndex);
     return {
       syncCommittee,
-      root,
+      rootHash,
       proof,
     };
   }
 
-  getMMRInfo(): { rootHash: Uint8Array; treeInfos: { root: Uint8Array; size: number }[] } {
+  getMMRInfo(): {
+    rootHash: Uint8Array;
+    peaks: Peaks;
+  } {
     const rootHash = this.mmr.getRootHash();
-    const treeInfos = this.mmr.getTreeInfo();
+    const peaks = this.mmr.getPeaks();
     return {
       rootHash,
-      treesInfos,
+      peaks,
     };
   }
 
@@ -51,7 +55,7 @@ export class SuperlightSync<T> implements ISuperlightProver<T> {
     const node = tree.getNode(nodeHash);
     return {
       isLeaf: node.isLeaf,
-      children: node.children,
+      children: node.children && node.children.map(c => c.hash),
     };
   }
 
