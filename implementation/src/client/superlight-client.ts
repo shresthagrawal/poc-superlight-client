@@ -5,12 +5,12 @@ import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
 import { ISuperlightProver } from '../prover/isuperlight-prover';
 
-export type ProverInfo = { 
-  root: Uint8Array; 
+export type ProverInfo = {
+  root: Uint8Array;
   peaks: Peaks;
-  syncCommittee: Uint8Array[],
-  index: number 
-}
+  syncCommittee: Uint8Array[];
+  index: number;
+};
 
 export class SuperlightClient<T> {
   merkleVerify: MerkleVerify;
@@ -100,17 +100,11 @@ export class SuperlightClient<T> {
       const children2 = nodeInfo2.children!;
       // check the children are correct
       const parentHash1 = digest(concatUint8Array(children1));
-      if (
-        children1.length !== this.n ||
-        !isUint8ArrayEq(parentHash1, node1)
-      )
+      if (children1.length !== this.n || !isUint8ArrayEq(parentHash1, node1))
         return false;
 
       const parentHash2 = digest(concatUint8Array(children2));
-      if (
-        children2.length !== this.n ||
-        !isUint8ArrayEq(parentHash2, node2)
-      )
+      if (children2.length !== this.n || !isUint8ArrayEq(parentHash2, node2))
         return true;
 
       // find the first point of disagreement
@@ -146,7 +140,13 @@ export class SuperlightClient<T> {
       // check the first peak of disagreement
       if (!isUint8ArrayEq(peaks1[i].rootHash, peaks2[i].rootHash)) {
         // run tree vs tree bisection game
-        return this.treeVsTree(prover1, prover2, peaks1[i].rootHash, peaks2[i].rootHash, offset);
+        return this.treeVsTree(
+          prover1,
+          prover2,
+          peaks1[i].rootHash,
+          peaks2[i].rootHash,
+          offset,
+        );
       }
       offset += peaks1[i].size;
     }
@@ -178,7 +178,7 @@ export class SuperlightClient<T> {
     return winners;
   }
 
-  // returns the prover info containing the current sync 
+  // returns the prover info containing the current sync
   // committee and prover index of the honest provers
   async sync(): Promise<ProverInfo[]> {
     // get the tree size by currentPeriod - genesisPeriod
@@ -190,16 +190,23 @@ export class SuperlightClient<T> {
     for (let i = 0; i < this.provers.length; i++) {
       const prover = this.provers[i];
       const mmrInfo = await prover.getMMRInfo();
-      const isMMRCorrect = this.merkleMountainVerify.verify(mmrInfo.rootHash, mmrInfo.peaks, mmrSize);
-      if(!isMMRCorrect)
-        continue;
-      
+      const isMMRCorrect = this.merkleMountainVerify.verify(
+        mmrInfo.rootHash,
+        mmrInfo.peaks,
+        mmrSize,
+      );
+      if (!isMMRCorrect) continue;
+
       const { syncCommittee, proof } = await prover.getLeafWithProof('latest');
       const leafHash = digest(concatUint8Array(syncCommittee));
       const lastPeak = mmrInfo.peaks[mmrInfo.peaks.length - 1];
-      const isSyncValid = this.merkleVerify.verify(leafHash, lastPeak.size - 1, lastPeak.rootHash, proof);
-      if(!isSyncValid)
-        continue;
+      const isSyncValid = this.merkleVerify.verify(
+        leafHash,
+        lastPeak.size - 1,
+        lastPeak.rootHash,
+        proof,
+      );
+      if (!isSyncValid) continue;
 
       validProverInfos.push({
         root: mmrInfo.rootHash,
@@ -208,7 +215,7 @@ export class SuperlightClient<T> {
         index: i,
       });
     }
-   
+
     return this.tournament(validProverInfos);
   }
 }

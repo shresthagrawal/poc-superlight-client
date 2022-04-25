@@ -1,6 +1,5 @@
 import { toHexString } from '@chainsafe/ssz';
-import { SecretKey } from "@chainsafe/bls";
-
+import { SecretKey } from '@chainsafe/bls';
 
 export function logFloor(x: number, base: number = 2) {
   return Math.floor(Math.log(x) / Math.log(base));
@@ -24,7 +23,7 @@ export function isUint8ArrayEq(a: Uint8Array, b: Uint8Array): boolean {
 export function generateRandomSyncCommittee(): Uint8Array[] {
   let res = [];
   // TODO: change 512 to constant
-  for(let i = 0; i < 512; i++) {
+  for (let i = 0; i < 512; i++) {
     res.push(SecretKey.fromKeygen().toPublicKey().toBytes());
   }
   return res;

@@ -30,8 +30,8 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   constructor(
     // This is required for testing purpose to make dishonest clients
     override: {
-      committee: Uint8Array[],
-      index: number
+      committee: Uint8Array[];
+      index: number;
     }[] = [],
     syncUpdatesJson: any[] = SyncUpdatesJson,
     genesisSnapshotJson: any = GenesisSnapshotJson,
@@ -57,11 +57,13 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
         .map(u => Array.from(u.nextSyncCommittee.pubkeys) as Uint8Array[]),
     ];
 
-    override.forEach(({committee, index}) => {
+    override.forEach(({ committee, index }) => {
       this.syncCommittees[index] = committee;
       this.syncUpdates[index - 1].nextSyncCommittee = {
         pubkeys: committee,
-        aggregatePubkey: PublicKey.aggregate(committee.map(c => PublicKey.fromBytes(c))).toBytes()
+        aggregatePubkey: PublicKey.aggregate(
+          committee.map(c => PublicKey.fromBytes(c)),
+        ).toBytes(),
       };
     });
   }
@@ -147,8 +149,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
   ): boolean {
     // check if update.nextSyncCommittee is currentCommittee
     const isUpdateValid = update.nextSyncCommittee.pubkeys.every(
-      (c: Uint8Array, i: number) =>
-      isUint8ArrayEq(currentCommittee[i], c),
+      (c: Uint8Array, i: number) => isUint8ArrayEq(currentCommittee[i], c),
     );
     if (!isUpdateValid) return false;
 
