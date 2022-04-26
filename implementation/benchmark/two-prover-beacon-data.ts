@@ -3,7 +3,7 @@ import {
   BeaconStoreProver,
   BeaconStoreVerifier,
 } from '../src/store/beacon-store';
-import { SuperlightProver } from '../src/prover/superlight-sync';
+import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { generateRandomSyncCommittee } from '../src/utils';
 
@@ -15,8 +15,8 @@ async function main() {
   const committee = generateRandomSyncCommittee();
   const beaconStoreProverD = new BeaconStoreProver([{ index: 3, committee }]);
 
-  const honestBeaconProver = new SuperlightProver(beaconStoreProverH);
-  const dishonestBeaconProver = new SuperlightProver(beaconStoreProverD);
+  const honestBeaconProver = new Prover(beaconStoreProverH);
+  const dishonestBeaconProver = new Prover(beaconStoreProverD);
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
   const superLightClient = new SuperlightClient(beaconStoreVerifer, [

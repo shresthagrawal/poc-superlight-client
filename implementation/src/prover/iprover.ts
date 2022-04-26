@@ -1,7 +1,7 @@
 import { AsyncOrSync } from 'ts-essentials';
 import { Peaks } from '../merkle-mountain-range';
 
-export interface ISuperlightProver<T> {
+export interface IProver<T> {
   getLeafWithProof(period: number | 'latest'): AsyncOrSync<{
     syncCommittee: Uint8Array[];
     rootHash: Uint8Array;

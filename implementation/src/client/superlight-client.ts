@@ -3,7 +3,7 @@ import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils';
 import { MerkleVerify } from '../merkle-tree';
 import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
-import { ISuperlightProver } from '../prover/isuperlight-prover';
+import { IProver } from '../prover/iprover';
 
 export type ProverInfo = {
   root: Uint8Array;
@@ -18,7 +18,7 @@ export class SuperlightClient<T> {
 
   constructor(
     protected store: ISyncStoreVerifer<T>,
-    protected provers: ISuperlightProver<T>[],
+    protected provers: IProver<T>[],
     protected n: number = 2,
   ) {
     this.merkleVerify = new MerkleVerify(digest, n);
@@ -27,8 +27,8 @@ export class SuperlightClient<T> {
 
   // return true if the first prover wins
   protected async treeVsTree(
-    prover1: ISuperlightProver<T>,
-    prover2: ISuperlightProver<T>,
+    prover1: IProver<T>,
+    prover2: IProver<T>,
     tree1: Uint8Array,
     tree2: Uint8Array,
     offset: number,
@@ -141,8 +141,8 @@ export class SuperlightClient<T> {
 
   // return true if the first prover wins
   protected async peaksVsPeaks(
-    prover1: ISuperlightProver<T>,
-    prover2: ISuperlightProver<T>,
+    prover1: IProver<T>,
+    prover2: IProver<T>,
     peaks1: Peaks,
     peaks2: Peaks,
   ): Promise<boolean> {

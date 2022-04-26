@@ -1,10 +1,10 @@
 import { digest } from '@chainsafe/as-sha256';
-import { ISuperlightProver } from './isuperlight-prover';
+import { IProver } from './iprover';
 import { MerkleMountainRange, Peaks } from '../merkle-mountain-range';
 import { concatUint8Array } from '../utils';
 import { ISyncStoreProver } from '../store/isync-store';
 
-export class SuperlightProver<T> implements ISuperlightProver<T> {
+export class Prover<T> implements IProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   latestPeriod: number;
