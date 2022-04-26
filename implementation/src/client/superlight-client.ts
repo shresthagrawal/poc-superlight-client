@@ -1,5 +1,5 @@
 import { digest } from '@chainsafe/as-sha256';
-import { concatUint8Array, isUint8ArrayEq } from '../utils';
+import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils';
 import { MerkleVerify } from '../merkle-tree';
 import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
@@ -45,6 +45,9 @@ export class SuperlightClient<T> {
 
     // if you reach the leaf then this is the first point of disagreement
     if (nodeInfo1.isLeaf) {
+      console.log(
+        `Found first point of disagreement at index(${offset + index})`,
+      );
       const currentPeriod = offset + index;
       const lastPeriod = currentPeriod - 1;
 
@@ -97,7 +100,17 @@ export class SuperlightClient<T> {
         );
     } else {
       const children1 = nodeInfo1.children!;
+      console.log(
+        `Compare node1(${smallHexStr(node1)}) with children1(${children1.map(
+          smallHexStr,
+        )})`,
+      );
       const children2 = nodeInfo2.children!;
+      console.log(
+        `Compare node2(${smallHexStr(node1)}) with children2(${children2.map(
+          smallHexStr,
+        )})`,
+      );
       // check the children are correct
       const parentHash1 = digest(concatUint8Array(children1));
       if (children1.length !== this.n || !isUint8ArrayEq(parentHash1, node1))
@@ -140,6 +153,13 @@ export class SuperlightClient<T> {
       // check the first peak of disagreement
       if (!isUint8ArrayEq(peaks1[i].rootHash, peaks2[i].rootHash)) {
         // run tree vs tree bisection game
+        console.log(
+          `TreeVsTree for Peak(${smallHexStr(
+            peaks1[i].rootHash,
+          )}) and Peak(${smallHexStr(peaks2[i].rootHash)}) of size(${
+            peaks2[i].size
+          })`,
+        );
         return this.treeVsTree(
           prover1,
           prover2,
@@ -163,8 +183,14 @@ export class SuperlightClient<T> {
       if (isUint8ArrayEq(currWinner.root, currProver.root)) {
         // if the prover has the same root as the current
         // winners simply add it to list of winners
+        console.log(
+          `Prover(${currProver.index}) added to the existing winners list`,
+        );
         winners.push(currProver);
       } else {
+        console.log(
+          `PeaksVsPeaks between Prover(${currWinner.index}) and Prover(${currProver.index})`,
+        );
         const areCurrentWinnersHonest = await this.peaksVsPeaks(
           this.provers[currWinner.index],
           this.provers[currProver.index],
@@ -172,7 +198,12 @@ export class SuperlightClient<T> {
           currProver.peaks,
         );
         // If the winner lost discard all the existing winners
-        if (!areCurrentWinnersHonest) winners = [currProver];
+        if (!areCurrentWinnersHonest) {
+          console.log(
+            `Prover(${currProver.index}) defeated all existing winners`,
+          );
+          winners = [currProver];
+        }
       }
     }
     return winners;
@@ -185,6 +216,9 @@ export class SuperlightClient<T> {
     const currentPeriod = this.store.getCurrentPeriod();
     const genesisPeriod = this.store.getGenesisPeriod();
     const mmrSize = currentPeriod - genesisPeriod + 1;
+    console.log(
+      `Sync started using ${this.provers.length} Provers on the tree size of ${mmrSize}`,
+    );
 
     const validProverInfos = [];
     for (let i = 0; i < this.provers.length; i++) {
@@ -195,7 +229,10 @@ export class SuperlightClient<T> {
         mmrInfo.peaks,
         mmrSize,
       );
-      if (!isMMRCorrect) continue;
+      if (!isMMRCorrect) {
+        console.log(`Prover(${i}) filtered because of incorrect MMR`);
+        continue;
+      }
 
       const { syncCommittee, proof } = await prover.getLeafWithProof('latest');
       const leafHash = digest(concatUint8Array(syncCommittee));
@@ -206,7 +243,12 @@ export class SuperlightClient<T> {
         lastPeak.rootHash,
         proof,
       );
-      if (!isSyncValid) continue;
+      if (!isSyncValid) {
+        console.log(
+          `Prover(${i}) filtered because of invalid last syncCommittee merkle proof`,
+        );
+        continue;
+      }
 
       validProverInfos.push({
         root: mmrInfo.rootHash,

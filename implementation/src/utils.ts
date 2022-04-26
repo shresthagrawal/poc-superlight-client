@@ -28,3 +28,5 @@ export function generateRandomSyncCommittee(): Uint8Array[] {
   }
   return res;
 }
+
+export const smallHexStr = (data: Uint8Array) => toHexString(data).slice(0, 8);
