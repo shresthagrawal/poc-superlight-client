@@ -12,7 +12,7 @@ import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
 import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
-import { isUint8ArrayEq } from '../utils';
+import { isUint8ArrayEq, isCommitteeSame } from '../utils';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   defaultChainConfig,
@@ -148,8 +148,9 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     update: BeaconUpdate,
   ): boolean {
     // check if update.nextSyncCommittee is currentCommittee
-    const isUpdateValid = update.nextSyncCommittee.pubkeys.every(
-      (c: Uint8Array, i: number) => isUint8ArrayEq(currentCommittee[i], c),
+    const isUpdateValid = isCommitteeSame(
+      update.nextSyncCommittee.pubkeys,
+      currentCommittee,
     );
     if (!isUpdateValid) return false;
 

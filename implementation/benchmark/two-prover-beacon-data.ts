@@ -5,6 +5,7 @@ import {
 } from '../src/store/beacon-store';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
+import { LightClient } from '../src/client/light-client';
 import { generateRandomSyncCommittee } from '../src/utils';
 
 async function main() {
@@ -23,8 +24,19 @@ async function main() {
     dishonestBeaconProver,
     honestBeaconProver,
   ]);
-  const result = await superLightClient.sync();
-  console.log(result);
+  const resultSL = await superLightClient.sync();
+  console.log(
+    `SuperlighClient found [${resultSL.map(
+      r => r.index,
+    )}] as honest provers \n`,
+  );
+
+  const lightClient = new LightClient(beaconStoreVerifer, [
+    dishonestBeaconProver,
+    honestBeaconProver,
+  ]);
+  const resultL = await lightClient.sync();
+  console.log(`Lightclient found ${resultL.index} as the first honest prover`);
 }
 
 main().catch(err => console.error(err));

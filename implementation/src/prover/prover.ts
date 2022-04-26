@@ -63,4 +63,14 @@ export class Prover<T> implements IProver<T> {
     if (period === 'latest') period = this.latestPeriod;
     return this.store.getSyncUpdate(period);
   }
+
+  getSyncUpdateWithNextCommittee(period: number): {
+    update: T;
+    syncCommittee: Uint8Array[];
+  } {
+    return {
+      update: this.store.getSyncUpdate(period),
+      syncCommittee: this.store.getSyncCommittee(period + 1),
+    };
+  }
 }

@@ -1,5 +1,10 @@
 import { digest } from '@chainsafe/as-sha256';
-import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils';
+import {
+  concatUint8Array,
+  isUint8ArrayEq,
+  smallHexStr,
+  isCommitteeSame,
+} from '../utils';
 import { MerkleVerify } from '../merkle-tree';
 import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
@@ -49,7 +54,6 @@ export class SuperlightClient<T> {
         `Found first point of disagreement at index(${offset + index})`,
       );
       const currentPeriod = offset + index;
-      const lastPeriod = currentPeriod - 1;
 
       const { syncCommittee: committee1 } = await prover1.getLeafWithProof(
         currentPeriod,
@@ -63,37 +67,47 @@ export class SuperlightClient<T> {
       const leafHash2 = digest(concatUint8Array(committee2));
       if (!isUint8ArrayEq(leafHash2, node2)) return false;
 
-      // ask for the previous leaf from either
-      // parties with a merkle proof
-      const { syncCommittee: prevCommittee, proof } =
-        await prover1.getLeafWithProof(index - 1);
-      const prevLeafHash = digest(concatUint8Array(prevCommittee));
-      const isPrevLeafCorrect = this.merkleVerify.verify(
-        prevLeafHash,
-        index - 1,
-        tree1,
-        proof,
-      );
-      if (!isPrevLeafCorrect) return false;
+      let is1Correct = false;
+      let is2Correct = false;
+      if (currentPeriod === 0) {
+        // If currentPeriod is zero then we can check against
+        // the genesis sync committee that is known
+        const genesisCommittee = this.store.getGenesisSyncCommittee();
+        is1Correct = isCommitteeSame(genesisCommittee, committee1);
+        is2Correct = isCommitteeSame(genesisCommittee, committee2);
+      } else {
+        const lastPeriod = currentPeriod - 1;
+        // ask for the previous leaf from either
+        // parties with a merkle proof
+        const { syncCommittee: prevCommittee, proof } =
+          await prover1.getLeafWithProof(index - 1);
+        const prevLeafHash = digest(concatUint8Array(prevCommittee));
+        const isPrevLeafCorrect = this.merkleVerify.verify(
+          prevLeafHash,
+          index - 1,
+          tree1,
+          proof,
+        );
+        if (!isPrevLeafCorrect) return false;
 
-      // ask both parties for sync update
-      // related to previous period
-      const update1 = await prover1.getSyncUpdate(lastPeriod);
-      const isUpdate1Correct = this.store.syncUpdateVerify(
-        prevCommittee,
-        committee1,
-        update1,
-      );
+        // ask both parties for sync update
+        // related to previous period
+        const update1 = await prover1.getSyncUpdate(lastPeriod);
+        is1Correct = this.store.syncUpdateVerify(
+          prevCommittee,
+          committee1,
+          update1,
+        );
 
-      const update2 = await prover2.getSyncUpdate(lastPeriod);
-      const isUpdate2Correct = this.store.syncUpdateVerify(
-        prevCommittee,
-        committee2,
-        update2,
-      );
-
-      if (isUpdate1Correct && !isUpdate2Correct) return true;
-      else if (isUpdate2Correct && !isUpdate1Correct) return false;
+        const update2 = await prover2.getSyncUpdate(lastPeriod);
+        is2Correct = this.store.syncUpdateVerify(
+          prevCommittee,
+          committee2,
+          update2,
+        );
+      }
+      if (is1Correct && !is2Correct) return true;
+      else if (is2Correct && !is1Correct) return false;
       else
         throw new Error(
           'both updates can not be correct/ incorrect at the same time',
@@ -217,7 +231,7 @@ export class SuperlightClient<T> {
     const genesisPeriod = this.store.getGenesisPeriod();
     const mmrSize = currentPeriod - genesisPeriod + 1;
     console.log(
-      `Sync started using ${this.provers.length} Provers on the tree size of ${mmrSize}`,
+      `Sync started using ${this.provers.length} Provers from period(${genesisPeriod}) to period(${currentPeriod})`,
     );
 
     const validProverInfos = [];

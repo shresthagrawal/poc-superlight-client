@@ -20,6 +20,11 @@ export function isUint8ArrayEq(a: Uint8Array, b: Uint8Array): boolean {
   return toHexString(a) === toHexString(b);
 }
 
+export function isCommitteeSame(a: Uint8Array[], b: Uint8Array[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((c, i) => isUint8ArrayEq(c, b[i]));
+}
+
 export function generateRandomSyncCommittee(): Uint8Array[] {
   let res = [];
   // TODO: change 512 to constant

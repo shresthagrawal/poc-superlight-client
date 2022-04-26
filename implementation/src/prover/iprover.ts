@@ -19,4 +19,8 @@ export interface IProver<T> {
   ): AsyncOrSync<{ isLeaf: boolean; children?: Uint8Array[] }>;
 
   getSyncUpdate(period: number | 'latest'): AsyncOrSync<T>;
+
+  getSyncUpdateWithNextCommittee(
+    period: number,
+  ): AsyncOrSync<{ update: T; syncCommittee: Uint8Array[] }>;
 }
