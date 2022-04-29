@@ -14,29 +14,34 @@ export class LightClient<T> {
     protected n: number = 2,
   ) {}
 
-  // Returns the latest sync committee
-  // or null if prover was found dishonest
+  // Returns the last valid sync committee
   async syncProver(
     prover: IProver<T>,
-    genesisPeriod: number,
+    startPeriod: number,
     currentPeriod: number,
-  ): Promise<Uint8Array[] | null> {
-    let currentCommittee = this.store.getGenesisSyncCommittee();
-    for (let period = genesisPeriod; period < currentPeriod; period++) {
+    startCommittee: Uint8Array[],
+  ): Promise<{ syncCommittee: Uint8Array[]; period: number }> {
+    for (let period = startPeriod; period < currentPeriod; period++) {
       const { update, syncCommittee: nextSyncCommittee } =
         await prover.getSyncUpdateWithNextCommittee(period);
       const isUpdateValid = this.store.syncUpdateVerify(
-        currentCommittee,
+        startCommittee,
         nextSyncCommittee,
         update,
       );
       if (!isUpdateValid) {
         console.log(`Found invalid update at period(${period})`);
-        return null;
+        return {
+          syncCommittee: startCommittee,
+          period,
+        };
       }
-      currentCommittee = nextSyncCommittee;
+      startCommittee = nextSyncCommittee;
     }
-    return currentCommittee;
+    return {
+      syncCommittee: startCommittee,
+      period: currentPeriod,
+    };
   }
 
   // returns the prover info containing the current sync
@@ -44,25 +49,29 @@ export class LightClient<T> {
   async sync(): Promise<ProverInfo> {
     // get the tree size by currentPeriod - genesisPeriod
     const currentPeriod = this.store.getCurrentPeriod();
-    const genesisPeriod = this.store.getGenesisPeriod();
+    let startPeriod = this.store.getGenesisPeriod();
+    let startCommittee = this.store.getGenesisSyncCommittee();
     console.log(
-      `Sync started using ${this.provers.length} Provers from period(${genesisPeriod}) to period(${currentPeriod})`,
+      `Sync started using ${this.provers.length} Provers from period(${startPeriod}) to period(${currentPeriod})`,
     );
 
     for (let i = 0; i < this.provers.length; i++) {
       const prover = this.provers[i];
       console.log(`Validating Prover(${i})`);
-      const syncCommittee = await this.syncProver(
+      const { syncCommittee, period } = await this.syncProver(
         prover,
-        genesisPeriod,
+        startPeriod,
         currentPeriod,
+        startCommittee,
       );
-      if (syncCommittee) {
+      if (period === currentPeriod) {
         return {
           index: i,
           syncCommittee,
         };
       }
+      startPeriod = period;
+      startCommittee = syncCommittee;
     }
     throw new Error('no honest prover found');
   }
