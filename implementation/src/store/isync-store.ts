@@ -7,6 +7,8 @@ export interface ISyncStoreProver<T> {
   getSyncCommittee(period: number): Uint8Array[];
 
   getSyncUpdate(period: number): T;
+
+  updateToJson(update: T): any;
 }
 
 export interface ISyncStoreVerifer<T> {
@@ -21,4 +23,6 @@ export interface ISyncStoreVerifer<T> {
   getCurrentPeriod(): number;
 
   getGenesisPeriod(): number;
+
+  updateFromJson(jsonUpdate: any): T;
 }

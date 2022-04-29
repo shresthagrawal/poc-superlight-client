@@ -3,6 +3,7 @@ import {
   BeaconStoreProver,
   BeaconStoreVerifier,
 } from '../src/store/beacon-store';
+import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
@@ -15,16 +16,19 @@ async function main() {
 
   const committee = generateRandomSyncCommittee();
   const beaconStoreProverD = new BeaconStoreProver([{ index: 3, committee }]);
-
-  const honestBeaconProver = new Prover(beaconStoreProverH);
   const dishonestBeaconProver = new Prover(beaconStoreProverD);
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
+  const honestProverUrl = 'http://localhost:3679';
+  const honestBeaconProver = new ProverClient(beaconStoreVerifer, honestProverUrl);
+
   const superLightClient = new SuperlightClient(beaconStoreVerifer, [
     dishonestBeaconProver,
     honestBeaconProver,
   ]);
+  console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
+  console.timeEnd('SuperLightClient Sync Time');
   console.log(
     `SuperlighClient found [${resultSL.map(
       r => r.index,
@@ -35,7 +39,10 @@ async function main() {
     dishonestBeaconProver,
     honestBeaconProver,
   ]);
+
+  console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();
+  console.timeEnd('LightClient Sync Time');
   console.log(`Lightclient found ${resultL.index} as the first honest prover`);
 }
 

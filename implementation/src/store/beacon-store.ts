@@ -95,6 +95,10 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
       );
     return this.syncUpdates[index];
   }
+
+  updateToJson(update: BeaconUpdate) {
+    return ssz.altair.LightClientUpdate.toJson(update);
+  }
 }
 
 // TODO: fix types
@@ -178,5 +182,9 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
 
   getGenesisPeriod(): number {
     return this.genesisPeriod;
+  }
+
+  updateFromJson(jsonUpdate: any) {
+    return ssz.altair.LightClientUpdate.fromJson(jsonUpdate);
   }
 }
