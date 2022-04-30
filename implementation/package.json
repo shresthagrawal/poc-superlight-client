@@ -17,7 +17,8 @@
     "dev": "NODE_ENV=development nodemon",
     "pretty": "prettier --write .",
     "build": "NODE_ENV=production tsc",
-    "start": "NODE_ENV=production && node ./dist"
+    "start:honest": "export NODE_ENV=production HONEST=true PORT=3679 && node ./dist/prover/server.js",
+    "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/prover/server.js"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "0.3.1",

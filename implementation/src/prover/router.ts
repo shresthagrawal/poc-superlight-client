@@ -1,11 +1,14 @@
 import * as express from 'express';
+import { init } from '@chainsafe/bls';
 import { BeaconStoreProver } from '../store/beacon-store';
 import { Prover } from './prover';
 import { fromHexString, toHexString } from '@chainsafe/ssz';
 
+const isHonest = process.env.HONEST !== 'false'
 
-export default function getApp() {
-  const store = new BeaconStoreProver();
+export default async function getApp() {
+  await init('blst-native');
+  const store = new BeaconStoreProver(isHonest);
   const prover = new Prover(store);
   const app = express();
 

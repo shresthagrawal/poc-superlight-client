@@ -7,25 +7,22 @@ import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
-import { generateRandomSyncCommittee } from '../src/utils';
+
+// Before running this script two prover servers must be started
+// On port 3678 a dishonest node 
+// On port 3679 a honest node 
+const proverUrls = [
+  'http://localhost:3678', // dishonest
+  'http://localhost:3679' // honest
+]
 
 async function main() {
   await init('blst-native');
 
-  const beaconStoreProverH = new BeaconStoreProver();
-
-  const committee = generateRandomSyncCommittee();
-  const beaconStoreProverD = new BeaconStoreProver([{ index: 3, committee }]);
-  const dishonestBeaconProver = new Prover(beaconStoreProverD);
-
   const beaconStoreVerifer = new BeaconStoreVerifier();
-  const honestProverUrl = 'http://localhost:3679';
-  const honestBeaconProver = new ProverClient(beaconStoreVerifer, honestProverUrl);
+  const beaconProvers = proverUrls.map(url => new ProverClient(beaconStoreVerifer, url));
 
-  const superLightClient = new SuperlightClient(beaconStoreVerifer, [
-    dishonestBeaconProver,
-    honestBeaconProver,
-  ]);
+  const superLightClient = new SuperlightClient(beaconStoreVerifer, beaconProvers);
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');
@@ -35,10 +32,7 @@ async function main() {
     )}] as honest provers \n`,
   );
 
-  const lightClient = new LightClient(beaconStoreVerifer, [
-    dishonestBeaconProver,
-    honestBeaconProver,
-  ]);
+  const lightClient = new LightClient(beaconStoreVerifer, beaconProvers);
 
   console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();

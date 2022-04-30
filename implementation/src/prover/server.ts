@@ -33,7 +33,7 @@ async function main() {
 
   const httpServer = http.createServer();
 
-  httpServer.on('request', getApp());
+  httpServer.on('request', await getApp());
 
   httpServer.listen(PORT, function () {
     console.log(`Server listening on port ${PORT}`);

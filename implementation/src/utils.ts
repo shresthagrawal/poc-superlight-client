@@ -34,4 +34,8 @@ export function generateRandomSyncCommittee(): Uint8Array[] {
   return res;
 }
 
+export function getRandomInt(max: number) {
+  return Math.floor(Math.random() * max);
+}
+
 export const smallHexStr = (data: Uint8Array) => toHexString(data).slice(0, 8);

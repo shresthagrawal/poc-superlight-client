@@ -6,15 +6,13 @@ import {
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
-import { generateRandomSyncCommittee } from '../src/utils';
+
 
 async function main() {
   await init('blst-native');
 
-  const beaconStoreProverH = new BeaconStoreProver();
-
-  const committee = generateRandomSyncCommittee();
-  const beaconStoreProverD = new BeaconStoreProver([{ index: 3, committee }]);
+  const beaconStoreProverH = new BeaconStoreProver(true);
+  const beaconStoreProverD = new BeaconStoreProver(false);
 
   const honestBeaconProver = new Prover(beaconStoreProverH);
   const dishonestBeaconProver = new Prover(beaconStoreProverD);
