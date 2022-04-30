@@ -2,7 +2,7 @@
   "name": "SuperLightClientETHPoS",
   "version": "1.0.0",
   "description": "Superligh client implementation for Ethereum PoS",
-  "main": "index.js",
+  "main": "dist/prover/server.js",
   "author": "shresthagrawal.31@gmail.com",
   "license": "MIT",
   "devDependencies": {
@@ -17,6 +17,7 @@
     "dev": "NODE_ENV=development nodemon",
     "pretty": "prettier --write .",
     "build": "NODE_ENV=production tsc",
+    "start": "export NODE_ENV=production && node ./dist/prover/server.js",
     "start:honest": "export NODE_ENV=production HONEST=true PORT=3679 && node ./dist/prover/server.js",
     "start:honest-dummy": "export NODE_ENV=production HONEST=true PORT=3679 DUMMY=true && node ./dist/prover/server.js",
     "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/prover/server.js",
@@ -35,6 +36,8 @@
     "axios": "0.27.2",
     "dotenv": "16.0.0",
     "express": "4.17.3",
+    "fs": "0.0.1-security",
+    "path": "0.12.7",
     "pretty-quick": "3.1.3",
     "seedrandom": "3.0.5"
   },
