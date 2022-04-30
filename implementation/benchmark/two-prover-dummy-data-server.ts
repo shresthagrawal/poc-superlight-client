@@ -4,6 +4,7 @@ import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
+import { Benchmark } from '../src/benchmark';
 
 // Before running this script two prover servers must be started
 // On port 3678 a dishonest node
@@ -16,27 +17,44 @@ const proverUrls = [
 async function main() {
   await init('blst-native');
 
-  const storeVerifier = new DummyStoreVerifier();
-  const beaconProvers = proverUrls.map(
-    url => new ProverClient(storeVerifier, url),
+  const dummyStoreVerifier = new DummyStoreVerifier();
+
+  // Superlight Client
+  const benchmarkSL = new Benchmark();
+  const beaconProversSL = proverUrls.map(
+    url => new ProverClient(dummyStoreVerifier, url, benchmarkSL),
+  );
+  const superLightClient = new SuperlightClient(
+    dummyStoreVerifier,
+    beaconProversSL,
   );
 
-  const superLightClient = new SuperlightClient(storeVerifier, beaconProvers);
-  console.time('SuperLightClient Sync Time');
+  benchmarkSL.startBenchmark();
   const resultSL = await superLightClient.sync();
-  console.timeEnd('SuperLightClient Sync Time');
+  const resultSLBenchmark = benchmarkSL.stopBenchmark();
   console.log(
-    `SuperlighClient found [${resultSL.map(
-      r => r.index,
-    )}] as honest provers \n`,
+    `\nSuperlighClient found [${resultSL.map(r => r.index)}] as honest provers`,
   );
+  console.log(`TimeToSync: ${resultSLBenchmark.timeToSync} ms`);
+  console.log(`BytesDownloaded: ${resultSLBenchmark.bytesDownloaded} bytes`);
+  console.log(`Interactions: ${resultSLBenchmark.interactions}\n`);
 
-  const lightClient = new LightClient(storeVerifier, beaconProvers);
+  // Light Client
+  const benchmarkL = new Benchmark();
+  const beaconProversL = proverUrls.map(
+    url => new ProverClient(dummyStoreVerifier, url, benchmarkL),
+  );
+  const lightClient = new LightClient(dummyStoreVerifier, beaconProversL);
 
-  console.time('LightClient Sync Time');
+  benchmarkL.startBenchmark();
   const resultL = await lightClient.sync();
-  console.timeEnd('LightClient Sync Time');
-  console.log(`Lightclient found ${resultL.index} as the first honest prover`);
+  const resultLBenchmark = benchmarkL.stopBenchmark();
+  console.log(
+    `\nLightclient found ${resultL.index} as the first honest prover`,
+  );
+  console.log(`TimeToSync: ${resultLBenchmark.timeToSync} ms`);
+  console.log(`BytesDownloaded: ${resultLBenchmark.bytesDownloaded} bytes`);
+  console.log(`Interactions: ${resultLBenchmark.interactions}`);
 }
 
 main().catch(err => console.error(err));

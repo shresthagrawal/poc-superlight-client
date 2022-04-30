@@ -3,19 +3,27 @@ import { fromHexString, toHexString } from '@chainsafe/ssz';
 import { IProver } from './iprover';
 import { Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
+import { Benchmark } from '../benchmark';
 
 export class ProverClient<T> implements IProver<T> {
   constructor(
     protected store: ISyncStoreVerifer<T>,
     protected serverUrl: string,
+    protected benchmark: Benchmark,
   ) {}
+
+  protected async getRequest(url: string) {
+    const res = await axios.get(url);
+    this.benchmark.increment(parseInt(res.headers['content-length']));
+    return res.data;
+  }
 
   async getLeafWithProof(period: number | 'latest'): Promise<{
     syncCommittee: Uint8Array[];
     rootHash: Uint8Array;
     proof: Uint8Array[][];
   }> {
-    const { data } = await axios.get(
+    const data = await this.getRequest(
       `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
     );
     return {
@@ -31,7 +39,7 @@ export class ProverClient<T> implements IProver<T> {
     rootHash: Uint8Array;
     peaks: Peaks;
   }> {
-    const { data } = await axios.get(`${this.serverUrl}/sync-committee/mmr`);
+    const data = await this.getRequest(`${this.serverUrl}/sync-committee/mmr`);
     return {
       rootHash: fromHexString(data.rootHash),
       peaks: data.peaks.map((p: { size: number; rootHash: string }) => ({
@@ -45,7 +53,7 @@ export class ProverClient<T> implements IProver<T> {
     treeRoot: Uint8Array,
     nodeHash: Uint8Array,
   ): Promise<{ isLeaf: boolean; children?: Uint8Array[] }> {
-    const { data } = await axios.get(
+    const data = await this.getRequest(
       `${this.serverUrl}/sync-committee/mmr/${toHexString(
         treeRoot,
       )}/node/${toHexString(nodeHash)}`,
@@ -58,7 +66,9 @@ export class ProverClient<T> implements IProver<T> {
   }
 
   async getSyncUpdate(period: number | 'latest'): Promise<T> {
-    const { data } = await axios.get(`${this.serverUrl}/sync-update/${period}`);
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-update/${period}`,
+    );
     return this.store.updateFromJson(data);
   }
 
@@ -66,7 +76,7 @@ export class ProverClient<T> implements IProver<T> {
     update: T;
     syncCommittee: Uint8Array[];
   }> {
-    const { data } = await axios.get(
+    const data = await this.getRequest(
       `${this.serverUrl}/sync-update/${period}?nextCommittee=true`,
     );
     return {

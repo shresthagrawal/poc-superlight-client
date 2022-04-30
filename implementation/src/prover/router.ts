@@ -6,7 +6,7 @@ import { Prover } from './prover';
 import { fromHexString, toHexString } from '@chainsafe/ssz';
 
 const isHonest = process.env.HONEST !== 'false';
-const isDummy = process.env.DUMMY !== 'false';
+const isDummy = process.env.DUMMY === 'true';
 const seed = process.env.seed || 'seedme';
 const chainSize = parseInt(process.env.CHAIN_SIZE || '100');
 const committeeSize = parseInt(process.env.COMMITTEE_SIZE || '10');
