@@ -6,21 +6,29 @@ import {
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
+import { shuffle } from '../src/utils';
+
+const dishonestProverCount = 4;
 
 async function main() {
   await init('blst-native');
 
   const beaconStoreProverH = new BeaconStoreProver(true);
-  const beaconStoreProverD = new BeaconStoreProver(false);
-
   const honestBeaconProver = new Prover(beaconStoreProverH);
-  const dishonestBeaconProver = new Prover(beaconStoreProverD);
+
+  const distHonestProvers = new Array(dishonestProverCount)
+    .fill(null)
+    .map((_, i) => {
+      const beaconStoreProverD = new BeaconStoreProver(false);
+      const dishonestBeaconProver = new Prover(beaconStoreProverD);
+      return dishonestBeaconProver;
+    });
+
+  const allProvers = shuffle([honestBeaconProver, ...distHonestProvers]);
+  console.log(allProvers.map(p => p.store.honest));
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
-  const superLightClient = new SuperlightClient(beaconStoreVerifer, [
-    dishonestBeaconProver,
-    honestBeaconProver,
-  ]);
+  const superLightClient = new SuperlightClient(beaconStoreVerifer, allProvers);
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');
@@ -30,10 +38,7 @@ async function main() {
     )}] as honest provers \n`,
   );
 
-  const lightClient = new LightClient(beaconStoreVerifer, [
-    dishonestBeaconProver,
-    honestBeaconProver,
-  ]);
+  const lightClient = new LightClient(beaconStoreVerifer, allProvers);
 
   console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();

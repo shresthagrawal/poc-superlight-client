@@ -30,17 +30,104 @@ export class SuperlightClient<T> {
     this.merkleMountainVerify = new MerkleMountainVerify(digest, n);
   }
 
-  // return true if the first prover wins
+  protected async getVerifiedSyncCommittee(
+    prover: IProver<T>,
+    period: number | 'latest',
+    verifiedPeaks: Peaks,
+  ): Promise<Uint8Array[] | false> {
+    const { syncCommittee, proof } = await prover.getLeafWithProof(period);
+    const lastPeak = verifiedPeaks[verifiedPeaks.length - 1];
+    const { peak, index } =
+      period === 'latest'
+        ? { peak: lastPeak, index: lastPeak.size - 1 }
+        : this.merkleMountainVerify.getPeakAndIndex(verifiedPeaks, period);
+    const leafHash = digest(concatUint8Array(syncCommittee));
+    const isSyncValid = this.merkleVerify.verify(
+      leafHash,
+      index,
+      peak.rootHash,
+      proof,
+    );
+    if (!isSyncValid) return false;
+    else return syncCommittee;
+  }
+
+  protected async checkNodeAndPrevUpdate(
+    prover1: IProver<T>,
+    prover2: IProver<T>,
+    peaks1: Peaks,
+    peaks2: Peaks,
+    period: number,
+  ): Promise<boolean> {
+    const committee1 = await this.getVerifiedSyncCommittee(
+      prover1,
+      period,
+      peaks1,
+    );
+    if (!committee1) return false;
+
+    const committee2 = await this.getVerifiedSyncCommittee(
+      prover2,
+      period,
+      peaks2,
+    );
+    if (!committee2) return true;
+
+    let is1Correct = false;
+    let is2Correct = false;
+    if (period === 0) {
+      // If period is zero then we can check against
+      // the genesis sync committee that is known
+      const genesisCommittee = this.store.getGenesisSyncCommittee();
+      is1Correct = isCommitteeSame(genesisCommittee, committee1);
+      is2Correct = isCommitteeSame(genesisCommittee, committee2);
+    } else {
+      const lastPeriod = period - 1;
+      // ask for the previous leaf from either
+      // parties with a merkle proof
+      const prevCommittee = await this.getVerifiedSyncCommittee(
+        prover1,
+        lastPeriod,
+        peaks1,
+      );
+      if (!prevCommittee) return false;
+
+      // ask both parties for sync update
+      // related to previous period
+      const update1 = await prover1.getSyncUpdate(lastPeriod);
+      is1Correct = this.store.syncUpdateVerify(
+        prevCommittee,
+        committee1,
+        update1,
+      );
+
+      const update2 = await prover2.getSyncUpdate(lastPeriod);
+      is2Correct = this.store.syncUpdateVerify(
+        prevCommittee,
+        committee2,
+        update2,
+      );
+    }
+
+    if (is1Correct && !is2Correct) return true;
+    else if (is2Correct && !is1Correct) return false;
+    else if (!is2Correct && !is1Correct) {
+      // If both of them are correct we can return either
+      // true or false. The one honest prover will defeat
+      // this prover later
+      return false;
+    } else throw new Error('both updates can not be correct at the same time');
+  }
+
   protected async treeVsTree(
     prover1: IProver<T>,
     prover2: IProver<T>,
     tree1: Uint8Array,
     tree2: Uint8Array,
-    offset: number,
     node1: Uint8Array = tree1,
     node2: Uint8Array = tree2,
     index: number = 0,
-  ): Promise<boolean> {
+  ): Promise<boolean | number> {
     // get node info
     const nodeInfo1 = await prover1.getNode(tree1, node1);
     const nodeInfo2 = await prover2.getNode(tree2, node2);
@@ -50,68 +137,8 @@ export class SuperlightClient<T> {
 
     // if you reach the leaf then this is the first point of disagreement
     if (nodeInfo1.isLeaf) {
-      console.log(
-        `Found first point of disagreement at index(${offset + index})`,
-      );
-      const currentPeriod = offset + index;
-
-      const { syncCommittee: committee1 } = await prover1.getLeafWithProof(
-        currentPeriod,
-      );
-      const leafHash1 = digest(concatUint8Array(committee1));
-      if (!isUint8ArrayEq(leafHash1, node1)) return false;
-
-      const { syncCommittee: committee2 } = await prover2.getLeafWithProof(
-        currentPeriod,
-      );
-      const leafHash2 = digest(concatUint8Array(committee2));
-      if (!isUint8ArrayEq(leafHash2, node2)) return false;
-
-      let is1Correct = false;
-      let is2Correct = false;
-      if (currentPeriod === 0) {
-        // If currentPeriod is zero then we can check against
-        // the genesis sync committee that is known
-        const genesisCommittee = this.store.getGenesisSyncCommittee();
-        is1Correct = isCommitteeSame(genesisCommittee, committee1);
-        is2Correct = isCommitteeSame(genesisCommittee, committee2);
-      } else {
-        const lastPeriod = currentPeriod - 1;
-        // ask for the previous leaf from either
-        // parties with a merkle proof
-        const { syncCommittee: prevCommittee, proof } =
-          await prover1.getLeafWithProof(index - 1);
-        const prevLeafHash = digest(concatUint8Array(prevCommittee));
-        const isPrevLeafCorrect = this.merkleVerify.verify(
-          prevLeafHash,
-          index - 1,
-          tree1,
-          proof,
-        );
-        if (!isPrevLeafCorrect) return false;
-
-        // ask both parties for sync update
-        // related to previous period
-        const update1 = await prover1.getSyncUpdate(lastPeriod);
-        is1Correct = this.store.syncUpdateVerify(
-          prevCommittee,
-          committee1,
-          update1,
-        );
-
-        const update2 = await prover2.getSyncUpdate(lastPeriod);
-        is2Correct = this.store.syncUpdateVerify(
-          prevCommittee,
-          committee2,
-          update2,
-        );
-      }
-      if (is1Correct && !is2Correct) return true;
-      else if (is2Correct && !is1Correct) return false;
-      else
-        throw new Error(
-          'both updates can not be correct/ incorrect at the same time',
-        );
+      console.log(`Found first point of disagreement at index(${index})`);
+      return index;
     } else {
       const children1 = nodeInfo1.children!;
       console.log(
@@ -142,7 +169,6 @@ export class SuperlightClient<T> {
             prover2,
             tree1,
             tree2,
-            offset,
             children1[i],
             children2[i],
             index * this.n + i,
@@ -174,13 +200,22 @@ export class SuperlightClient<T> {
             peaks2[i].size
           })`,
         );
-        return this.treeVsTree(
+        const winnerOrIndexOfDifference = await this.treeVsTree(
           prover1,
           prover2,
           peaks1[i].rootHash,
           peaks2[i].rootHash,
-          offset,
         );
+        if (typeof winnerOrIndexOfDifference === 'boolean')
+          return winnerOrIndexOfDifference;
+        else
+          return this.checkNodeAndPrevUpdate(
+            prover1,
+            prover2,
+            peaks1,
+            peaks2,
+            winnerOrIndexOfDifference + offset,
+          );
       }
       offset += peaks1[i].size;
     }
@@ -248,16 +283,12 @@ export class SuperlightClient<T> {
         continue;
       }
 
-      const { syncCommittee, proof } = await prover.getLeafWithProof('latest');
-      const leafHash = digest(concatUint8Array(syncCommittee));
-      const lastPeak = mmrInfo.peaks[mmrInfo.peaks.length - 1];
-      const isSyncValid = this.merkleVerify.verify(
-        leafHash,
-        lastPeak.size - 1,
-        lastPeak.rootHash,
-        proof,
+      const syncCommittee = await this.getVerifiedSyncCommittee(
+        prover,
+        'latest',
+        mmrInfo.peaks,
       );
-      if (!isSyncValid) {
+      if (!syncCommittee) {
         console.log(
           `Prover(${i}) filtered because of invalid last syncCommittee merkle proof`,
         );

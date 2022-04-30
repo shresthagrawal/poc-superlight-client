@@ -12,7 +12,12 @@ import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
 import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
-import { isUint8ArrayEq, isCommitteeSame, getRandomInt, generateRandomSyncCommittee } from '../utils';
+import {
+  isUint8ArrayEq,
+  isCommitteeSame,
+  getRandomInt,
+  generateRandomSyncCommittee,
+} from '../utils';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   defaultChainConfig,
@@ -29,7 +34,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
 
   constructor(
     // This is required for testing purpose to make dishonest clients
-    honest: boolean = true,
+    public honest: boolean = true,
     syncUpdatesJson: any[] = SyncUpdatesJson,
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
@@ -54,18 +59,17 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
         .map(u => Array.from(u.nextSyncCommittee.pubkeys) as Uint8Array[]),
     ];
 
-    // If the beacon-store is not honest then override syn committees
+    // If the beacon-store is not honest then override sync committees
     if (!honest) {
       const size = this.syncUpdates.length;
-      // The overrideCount should be greater than 0 to force dishonesty
-      const overrideCount = 1 + getRandomInt(size/5);
-      console.log(`Overriding ${overrideCount} false sync committee`);
-      for (let i = 0; i < overrideCount; i++) {
-        const index = getRandomInt(size);
-        const committee = generateRandomSyncCommittee();
-        this.syncCommittees[index] = committee;
-        if (index > 0) {
-          this.syncUpdates[index - 1].nextSyncCommittee = {
+      // The index staring which the sync committees should be incorrect
+      const startIndex = getRandomInt(size);
+      const committee = generateRandomSyncCommittee();
+      console.log(`Overriding starting from ${startIndex}`);
+      for (let i = startIndex; i < size; i++) {
+        this.syncCommittees[i] = committee;
+        if (i > 0) {
+          this.syncUpdates[i - 1].nextSyncCommittee = {
             pubkeys: committee,
             aggregatePubkey: PublicKey.aggregate(
               committee.map(c => PublicKey.fromBytes(c)),

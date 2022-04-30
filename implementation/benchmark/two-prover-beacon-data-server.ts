@@ -1,28 +1,30 @@
 import { init } from '@chainsafe/bls';
-import {
-  BeaconStoreProver,
-  BeaconStoreVerifier,
-} from '../src/store/beacon-store';
+import { BeaconStoreVerifier } from '../src/store/beacon-store';
 import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
 
 // Before running this script two prover servers must be started
-// On port 3678 a dishonest node 
-// On port 3679 a honest node 
+// On port 3678 a dishonest node
+// On port 3679 a honest node
 const proverUrls = [
   'http://localhost:3678', // dishonest
-  'http://localhost:3679' // honest
-]
+  'http://localhost:3679', // honest
+];
 
 async function main() {
   await init('blst-native');
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
-  const beaconProvers = proverUrls.map(url => new ProverClient(beaconStoreVerifer, url));
+  const beaconProvers = proverUrls.map(
+    url => new ProverClient(beaconStoreVerifer, url),
+  );
 
-  const superLightClient = new SuperlightClient(beaconStoreVerifer, beaconProvers);
+  const superLightClient = new SuperlightClient(
+    beaconStoreVerifer,
+    beaconProvers,
+  );
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');

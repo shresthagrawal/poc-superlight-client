@@ -18,7 +18,9 @@
     "pretty": "prettier --write .",
     "build": "NODE_ENV=production tsc",
     "start:honest": "export NODE_ENV=production HONEST=true PORT=3679 && node ./dist/prover/server.js",
-    "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/prover/server.js"
+    "start:honest-dummy": "export NODE_ENV=production HONEST=true PORT=3679 DUMMY=true && node ./dist/prover/server.js",
+    "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/prover/server.js",
+    "start:dishonest-dummy": "export NODE_ENV=production HONEST=false PORT=3678 DUMMY=true && node ./dist/prover/server.js"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "0.3.1",
@@ -29,10 +31,12 @@
     "@chainsafe/lodestar-types": "0.34.0",
     "@chainsafe/ssz": "0.9.1",
     "@types/express": "4.17.13",
+    "@types/seedrandom": "3.0.2",
     "axios": "0.27.2",
     "dotenv": "16.0.0",
     "express": "4.17.3",
-    "pretty-quick": "3.1.3"
+    "pretty-quick": "3.1.3",
+    "seedrandom": "3.0.5"
   },
   "resolutions": {
     "@chainsafe/lodestar-types": "0.34.0",

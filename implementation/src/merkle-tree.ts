@@ -65,11 +65,11 @@ export class MerkleTree {
     let curr = this.leaves[index];
     if (!curr) throw new Error('index out of range');
     while (!curr.isRoot && curr.parent) {
-      const siblings = curr.parent.children!.filter(
-        n => !isUint8ArrayEq(n.hash, curr.hash),
-      );
+      const pos = index % this.n;
+      const siblings = curr.parent.children!.filter((_, i) => i !== pos);
       result.push(siblings.map(s => s.hash));
       curr = curr.parent;
+      index = Math.floor(index / this.n);
     }
     return result;
   }

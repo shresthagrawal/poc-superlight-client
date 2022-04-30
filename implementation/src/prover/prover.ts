@@ -9,7 +9,7 @@ export class Prover<T> implements IProver<T> {
   startPeriod: number;
   latestPeriod: number;
 
-  constructor(protected store: ISyncStoreProver<T>, n = 2) {
+  constructor(public store: ISyncStoreProver<T>, n = 2) {
     this.mmr = new MerkleMountainRange(digest, n);
 
     const { startPeriod, syncCommittees } = store.getAllSyncCommittees();

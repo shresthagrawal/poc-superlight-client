@@ -7,7 +7,7 @@ import { ISyncStoreVerifer } from '../store/isync-store';
 export class ProverClient<T> implements IProver<T> {
   constructor(
     protected store: ISyncStoreVerifer<T>,
-    protected serverUrl: string
+    protected serverUrl: string,
   ) {}
 
   async getLeafWithProof(period: number | 'latest'): Promise<{
@@ -15,11 +15,15 @@ export class ProverClient<T> implements IProver<T> {
     rootHash: Uint8Array;
     proof: Uint8Array[][];
   }> {
-    const { data } = await axios.get(`${this.serverUrl}/sync-committee/mmr/leaf/${period}`);
+    const { data } = await axios.get(
+      `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
+    );
     return {
       syncCommittee: data.syncCommittee.map((c: string) => fromHexString(c)),
       rootHash: fromHexString(data.rootHash),
-      proof: data.proof.map((l: string[]) => l.map((c: string) => fromHexString(c))),
+      proof: data.proof.map((l: string[]) =>
+        l.map((c: string) => fromHexString(c)),
+      ),
     };
   }
 
@@ -30,9 +34,10 @@ export class ProverClient<T> implements IProver<T> {
     const { data } = await axios.get(`${this.serverUrl}/sync-committee/mmr`);
     return {
       rootHash: fromHexString(data.rootHash),
-      peaks: data.peaks.map(
-        (p: {size: number, rootHash: string }) => ({ size: p.size, rootHash: fromHexString(p.rootHash)})
-      ),
+      peaks: data.peaks.map((p: { size: number; rootHash: string }) => ({
+        size: p.size,
+        rootHash: fromHexString(p.rootHash),
+      })),
     };
   }
 
@@ -40,10 +45,15 @@ export class ProverClient<T> implements IProver<T> {
     treeRoot: Uint8Array,
     nodeHash: Uint8Array,
   ): Promise<{ isLeaf: boolean; children?: Uint8Array[] }> {
-    const { data } = await axios.get(`${this.serverUrl}/sync-committee/mmr/${toHexString(treeRoot)}/node/${toHexString(nodeHash)}`);
+    const { data } = await axios.get(
+      `${this.serverUrl}/sync-committee/mmr/${toHexString(
+        treeRoot,
+      )}/node/${toHexString(nodeHash)}`,
+    );
     return {
       isLeaf: data.isLeaf,
-      children: data.children && data.children.map((c: string) => fromHexString(c)),
+      children:
+        data.children && data.children.map((c: string) => fromHexString(c)),
     };
   }
 
@@ -56,7 +66,9 @@ export class ProverClient<T> implements IProver<T> {
     update: T;
     syncCommittee: Uint8Array[];
   }> {
-    const { data } = await axios.get(`${this.serverUrl}/sync-update/${period}?nextCommittee=true`)
+    const { data } = await axios.get(
+      `${this.serverUrl}/sync-update/${period}?nextCommittee=true`,
+    );
     return {
       update: this.store.updateFromJson(data.update),
       syncCommittee: data.syncCommittee.map((c: string) => fromHexString(c)),

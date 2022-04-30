@@ -61,7 +61,8 @@ export class MerkleMountainRange {
   }
 }
 
-export type Peaks = { rootHash: Uint8Array; size: number }[];
+export type Peak = { rootHash: Uint8Array; size: number };
+export type Peaks = Peak[];
 
 export class MerkleMountainVerify {
   constructor(protected hashFn: HashFunction, protected n: number = 2) {}
@@ -80,5 +81,14 @@ export class MerkleMountainVerify {
       root,
       this.hashFn(concatUint8Array(peaks.map(i => i.rootHash))),
     );
+  }
+
+  getPeakAndIndex(peaks: Peaks, index: number): { peak: Peak; index: number } {
+    let sum = 0;
+    for (let peak of peaks) {
+      if (sum + peak.size > index) return { peak, index: index - sum };
+      else sum += peak.size;
+    }
+    throw new Error('index should not be greater than the tree size');
   }
 }
