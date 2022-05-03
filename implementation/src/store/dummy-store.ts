@@ -56,6 +56,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     // generate dummy sync updates
     this.syncUpdates = new Array(size).fill(null).map((_, i) => {
       if (honest || i < dishonestyIndex) {
+        console.log(`Creating honest syncUpdates for period ${i}`);
         const nextSyncCommitteePK = allCommitteePK.slice(
           committeeSize * (i + 1),
           committeeSize * (i + 2),
@@ -77,6 +78,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
           aggregateSignature,
         };
       } else {
+        console.log(`Creating malicious syncUpdates for period ${i}`);
         // generate malicious keys
         const nextSyncCommitteePK = new Array(committeeSize)
           .fill(null)
