@@ -17,11 +17,12 @@
     "dev": "NODE_ENV=development nodemon",
     "pretty": "prettier --write .",
     "build": "NODE_ENV=production tsc",
-    "start": "export NODE_ENV=production && node ./dist/prover/server.js",
-    "start:honest": "export NODE_ENV=production HONEST=true PORT=3679 && node ./dist/prover/server.js",
-    "start:honest-dummy": "export NODE_ENV=production HONEST=true PORT=3679 DUMMY=true && node ./dist/prover/server.js",
-    "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/prover/server.js",
-    "start:dishonest-dummy": "export NODE_ENV=production HONEST=false PORT=3678 DUMMY=true && node ./dist/prover/server.js"
+    "start": "export NODE_ENV=production && node ./dist/src/prover/server.js",
+    "start:honest": "export NODE_ENV=production HONEST=true PORT=3679 && node ./dist/src/prover/server.js",
+    "start:honest-dummy": "export NODE_ENV=production HONEST=true PORT=3679 DUMMY=true && node ./dist/src/prover/server.js",
+    "start:dishonest": "export NODE_ENV=production HONEST=false PORT=3678 && node ./dist/src/prover/server.js",
+    "start:dishonest-dummy": "export NODE_ENV=production HONEST=false PORT=3678 DUMMY=true && node ./dist/src/prover/server.js",
+    "benchmark": "node ./dist/benchmark/multiple-server"
   },
   "dependencies": {
     "@chainsafe/as-sha256": "0.3.1",

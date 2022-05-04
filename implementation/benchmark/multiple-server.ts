@@ -1,4 +1,7 @@
 import { init } from '@chainsafe/bls';
+import { Worker, isMainThread, workerData, parentPort } from 'worker_threads';
+import * as fs from 'fs';
+import * as path from 'path';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
 import { BeaconStoreVerifier } from '../src/store/beacon-store';
 import { ProverClient } from '../src/prover/prover-client';
@@ -7,32 +10,30 @@ import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
 import { Benchmark } from '../src/benchmark';
 import { shuffle } from '../src/utils';
-import * as fs from 'fs';
-import * as path from 'path';
 
-const benchmarkOutput = './benchmark-results.json';
+// This config should match the prover config
+const proverCount = 4;
+const isDummy = true;
+const size = 1024;
+const committeeSize = 512;
+const trials = 10;
+
+const benchmarkOutput = `../../results/${isDummy ? 'dummy' : 'beacon'}-data-${proverCount}-${committeeSize}-${size}.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);
 
+const HonestProverUrl = 'https://honest-node-1.herokuapp.com';
+const DishonestProverUrls = Array(13).fill(null).map((_, i) => `https://dishonest-node-${i + 1}.herokuapp.com`);
 
-const HonestProverUrl = 'http://localhost:3679';
+async function benchmark(trial: number) {
+  const result = [];
+  // two times shuffling is required
+  // first to randomly get provers
+  // second to shufle the placement of honest prover
+  const dishonestUrls = shuffle(DishonestProverUrls).slice(0, proverCount - 1);
+  const proverUrls = shuffle([HonestProverUrl, ...dishonestUrls]);
 
-const DishonestProverUrls = [
-  'http://localhost:3678', // dishonest
-  // 'http://localhost:3679', // honest
-];
-
-const proverCounts = [
-  2
-];
-
-const isDummy = true;
-const size = 100;
-const committeeSize = 10;
-const trials = 10;
-
-async function benchmark(proverUrls: string [], trial: number) {
   const verifier = isDummy ? new DummyStoreVerifier(size, committeeSize) : new BeaconStoreVerifier();
 
   // Superlight Client
@@ -54,10 +55,14 @@ async function benchmark(proverUrls: string [], trial: number) {
   console.log(`TimeToSync: ${resultSLBenchmark.timeToSync} ms`);
   console.log(`BytesDownloaded: ${resultSLBenchmark.bytesDownloaded} bytes`);
   console.log(`Interactions: ${resultSLBenchmark.interactions}\n`);
-  benchmarks.push({
+  result.push({
     type: 'superlight',
     trial,
-    ...resultSLBenchmark 
+    ...resultSLBenchmark,
+    proverCount: proverUrls.length,
+    isDummy,
+    chainSize: size,
+    committeeSize
   });
 
   // Light Client
@@ -76,28 +81,44 @@ async function benchmark(proverUrls: string [], trial: number) {
   console.log(`TimeToSync: ${resultLBenchmark.timeToSync} ms`);
   console.log(`BytesDownloaded: ${resultLBenchmark.bytesDownloaded} bytes`);
   console.log(`Interactions: ${resultLBenchmark.interactions}`);
-  benchmarks.push({
+  result.push({
     type: 'light',
     trial,
-    ...resultLBenchmark 
+    ...resultLBenchmark,
+    proverCount: proverUrls.length,
+    isDummy,
+    chainSize: size,
+    committeeSize
   });
-
-  fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+  return result;
 }
+
 
 async function main() {
-  await init('blst-native');
-
-  const trialPromises = proverCounts.map(async pc => {
-    // two times shuffling is required
-    // first to randomly get provers
-    // second to shufle the placement of honest prover
-    const dishonestUrls = shuffle(DishonestProverUrls).slice(0, pc - 1);
-    const allUrls = shuffle([HonestProverUrl, ...dishonestUrls]);
-    return (new Array(trials)).fill(null).map((_, i) => benchmark(allUrls, i)); 
-  }).flat();
-
-  await Promise.all(trialPromises);
+  const workerPromises = Array(trials).fill(null).map((_, i) => new Promise<void>((resolve, reject)=> {
+    const worker = new Worker(__filename, {workerData: i});
+    worker.on('message', (data) => {
+      benchmarks.push(...data);
+      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+      return resolve(); 
+    });
+    worker.on('error', reject);
+    worker.on('exit', (code) => {
+       if (code !== 0)
+          reject(new Error(`Worker stopped with exit code ${code}`));
+    });
+  }));
+  await Promise.all(workerPromises);
 }
 
-main().catch(err => console.error(err));
+async function worker() {
+  await init('blst-native');
+  const result = await benchmark(workerData);
+  parentPort!.postMessage(result);
+}
+
+if(isMainThread) {
+  main().catch(err => console.error(err));
+} else {
+  worker().catch(err => console.error(err));
+}
