@@ -48,6 +48,7 @@ Benchmarks on dummy data with 1024 sync committee periods, 512 sync committee si
     * Run `bash deployemnt/create-app.sh` to create 14 heroku servers
     * Run `bash deployment/deploy-app.sh` to deploy the code to each heroku servers
     * Choose which config you would like to benchark. Then run `bash deployment/set-config-{your-config}.sh` to set the config for all the heroku servers
+    * If the dummy chain is used it might take time to generate the dummy data. You can check if the servers are up by running `bash deployment/ping-app.sh`
 2. Setup to run client locally
     * Run `yarn install` to install the dependencies 
     * Run `yarn build` to build the project locally
