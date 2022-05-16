@@ -1,2 +1,4 @@
 local/
 .env
+*.pgf
+*.ipynb_checkpoints

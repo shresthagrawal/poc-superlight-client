@@ -1,0 +1,222 @@
+[
+  {
+    "type": "superlight",
+    "trial": 7,
+    "interactions": 89,
+    "bytesDownloaded": 1003113,
+    "timeToSync": 35855,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 7,
+    "interactions": 1025,
+    "bytesDownloaded": 106305739,
+    "timeToSync": 763245,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 2,
+    "interactions": 89,
+    "bytesDownloaded": 1003107,
+    "timeToSync": 34881,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 2,
+    "interactions": 1027,
+    "bytesDownloaded": 106513165,
+    "timeToSync": 768383,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 8,
+    "interactions": 89,
+    "bytesDownloaded": 1003113,
+    "timeToSync": 34388,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 8,
+    "interactions": 1027,
+    "bytesDownloaded": 106513165,
+    "timeToSync": 770289,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 0,
+    "interactions": 89,
+    "bytesDownloaded": 1003113,
+    "timeToSync": 34405,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 0,
+    "interactions": 1025,
+    "bytesDownloaded": 106305739,
+    "timeToSync": 772313,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 9,
+    "interactions": 89,
+    "bytesDownloaded": 1003109,
+    "timeToSync": 33844,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 9,
+    "interactions": 1026,
+    "bytesDownloaded": 106409451,
+    "timeToSync": 774811,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 6,
+    "interactions": 89,
+    "bytesDownloaded": 1003109,
+    "timeToSync": 34600,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 6,
+    "interactions": 1025,
+    "bytesDownloaded": 106305738,
+    "timeToSync": 774212,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 4,
+    "interactions": 89,
+    "bytesDownloaded": 1003111,
+    "timeToSync": 34899,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 4,
+    "interactions": 1026,
+    "bytesDownloaded": 106409452,
+    "timeToSync": 774242,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 3,
+    "interactions": 89,
+    "bytesDownloaded": 1003111,
+    "timeToSync": 34894,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 3,
+    "interactions": 1025,
+    "bytesDownloaded": 106305739,
+    "timeToSync": 774555,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 5,
+    "interactions": 89,
+    "bytesDownloaded": 1003109,
+    "timeToSync": 36561,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 5,
+    "interactions": 1026,
+    "bytesDownloaded": 106409451,
+    "timeToSync": 775286,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "superlight",
+    "trial": 1,
+    "interactions": 89,
+    "bytesDownloaded": 1003111,
+    "timeToSync": 34540,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  },
+  {
+    "type": "light",
+    "trial": 1,
+    "interactions": 1026,
+    "bytesDownloaded": 106409452,
+    "timeToSync": 778152,
+    "proverCount": 4,
+    "isDummy": true,
+    "chainSize": 1024,
+    "committeeSize": 512
+  }
+]

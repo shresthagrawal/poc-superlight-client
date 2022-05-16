@@ -12,9 +12,9 @@ import { Benchmark } from '../src/benchmark';
 import { shuffle } from '../src/utils';
 
 // This config should match the prover config
-const proverCount = 4;
+const proverCount = 8;
 const isDummy = true;
-const size = 1024;
+const size = 128;
 const committeeSize = 512;
 const trials = 10;
 

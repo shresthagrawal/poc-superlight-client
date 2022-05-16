@@ -4,6 +4,7 @@ import { IProver } from './iprover';
 import { Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
 import { Benchmark } from '../benchmark';
+import { wait } from '../utils';
 
 export class ProverClient<T> implements IProver<T> {
   constructor(
@@ -12,10 +13,19 @@ export class ProverClient<T> implements IProver<T> {
     protected benchmark: Benchmark,
   ) {}
 
-  protected async getRequest(url: string) {
-    const res = await axios.get(url);
-    this.benchmark.increment(parseInt(res.headers['content-length']));
-    return res.data;
+  protected async getRequest(url: string, retry: number = 5): Promise<any> {
+    try {
+      const res = await axios.get(url);
+      this.benchmark.increment(parseInt(res.headers['content-length']));
+      return res.data;
+    } catch(e) {
+      console.error(`Errror while fetching, retry left ${retry}`, e);
+      if (retry > 0) {
+        await wait(500);
+        return await this.getRequest(url, retry - 1);
+      } else 
+        throw e;
+    }
   }
 
   async getLeafWithProof(period: number | 'latest'): Promise<{
