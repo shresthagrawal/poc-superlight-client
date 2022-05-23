@@ -19,15 +19,18 @@ Benchmarks on BeaconChain data with 155 sync committee periods, 8 provers
 
 |Implementation| Time To Sync | Data Downloaded | Interactions |
 |--------------|--------------|-----------------|--------------|
-|Superlight Client| 62s|2.28mb|163|
-|Light Cleint| 106s|16.65mb|159|
+|Light Client | 110.72 ± 7.00s | 16.83 ± 0.21MB | 159.60 ± 1.96 |
+|Superlight Client | 62.63 ± 0.85s | 2.29 ± 0.00MB | 163.00 ± 0.00 |
+
+
 
 Benchmarks on dummy data with 1024 sync committee periods, 512 sync committee size, 8 provers
 
 |Implementation| Time To Sync | Data Downloaded | Interactions |
 |--------------|--------------|-----------------|--------------|
-|Superlight Client| 90s|2.27mb|205|
-|Light Cleint| 803s|106mb|1028|
+|Light Client | 803.42 ± 3.69s | 106.58 ± 0.22MB | 1027.60 ± 2.11 |
+|Superlight Client | 92.95 ± 1.97s | 2.27 ± 0.00MB | 205.00 ± 0.00 |
+
 > Notice that the data downloaded by Superlight Client for dummy chain is smaller than that of Beacon chain even though the dummy chain has a higher size. This is because the Beacon implementation uses the Beacon chain update data type proposed in the Sync Committee specs. This data structure consists of params which are not there in the dummy chain. 
 
 
