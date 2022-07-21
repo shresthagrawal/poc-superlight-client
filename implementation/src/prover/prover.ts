@@ -59,8 +59,7 @@ export class Prover<T> implements IProver<T> {
     };
   }
 
-  getSyncUpdate(period: number | 'latest'): T {
-    if (period === 'latest') period = this.latestPeriod;
+  getSyncUpdate(period: number): T {
     return this.store.getSyncUpdate(period);
   }
 
@@ -72,5 +71,16 @@ export class Prover<T> implements IProver<T> {
       update: this.store.getSyncUpdate(period),
       syncCommittee: this.store.getSyncCommittee(period + 1),
     };
+  }
+
+  getSyncUpdatesWithNextCommittees(startPeriod: number, maxCount: number): {
+    update: T;
+    syncCommittee: Uint8Array[];
+  }[] {
+    const count = startPeriod + maxCount - 1 >= this.latestPeriod ? this.latestPeriod - startPeriod : maxCount;
+    return Array(count).fill(0).map((_, i) => ({
+      update: this.store.getSyncUpdate(startPeriod + i),
+      syncCommittee: this.store.getSyncCommittee(startPeriod + i + 1),
+    }));
   }
 }

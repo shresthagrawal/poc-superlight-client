@@ -9,18 +9,20 @@ import { LightClient } from '../src/client/light-client';
 import { shuffle } from '../src/utils';
 
 const dishonestProverCount = 4;
+const n = 2;
+const batchSize = 1;
 
 async function main() {
   await init('blst-native');
 
   const beaconStoreProverH = new BeaconStoreProver(true);
-  const honestBeaconProver = new Prover(beaconStoreProverH);
+  const honestBeaconProver = new Prover(beaconStoreProverH, n);
 
   const distHonestProvers = new Array(dishonestProverCount)
     .fill(null)
     .map((_, i) => {
       const beaconStoreProverD = new BeaconStoreProver(false);
-      const dishonestBeaconProver = new Prover(beaconStoreProverD);
+      const dishonestBeaconProver = new Prover(beaconStoreProverD, n);
       return dishonestBeaconProver;
     });
 
@@ -28,7 +30,7 @@ async function main() {
   console.log(allProvers.map(p => p.store.honest));
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
-  const superLightClient = new SuperlightClient(beaconStoreVerifer, allProvers);
+  const superLightClient = new SuperlightClient(beaconStoreVerifer, allProvers, n);
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');
@@ -38,7 +40,7 @@ async function main() {
     )}] as honest provers \n`,
   );
 
-  const lightClient = new LightClient(beaconStoreVerifer, allProvers);
+  const lightClient = new LightClient(beaconStoreVerifer, allProvers, batchSize);
 
   console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();

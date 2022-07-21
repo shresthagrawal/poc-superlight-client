@@ -99,9 +99,9 @@ export default async function getApp() {
     const period =
       req.params.period === 'latest' ? 'latest' : parseInt(req.params.period);
     const nextCommittee = req.query.nextCommittee == 'true';
+    if (period === 'latest')
+      return res.status(400).json({ error: 'Invalid period recieved' });
     if (nextCommittee) {
-      if (period === 'latest')
-        return res.status(400).json({ error: 'Invalid period recieved' });
       const { update, syncCommittee } =
         prover.getSyncUpdateWithNextCommittee(period);
       return res.json({
@@ -112,6 +112,23 @@ export default async function getApp() {
       const update = prover.getSyncUpdate(period);
       return res.json(store.updateToJson(update));
     }
+  });
+
+  app.get('/sync-updates', function (req, res) {
+    if(!ps.initCompleted)
+      return res.status(400).json({ error: 'Prover not initialised' });
+    const prover = ps.getProver();
+    const store = ps.getStore();
+    if (!req.query.startPeriod || !req.query.maxCount)
+      return res.status(400).json({ error: 'startPeriod or maxCount not provided' });
+    const startPeriod = parseInt(req.query.startPeriod as string);
+    const maxCount = parseInt(req.query.maxCount as string);
+    const updatesAndCommittees =
+        prover.getSyncUpdatesWithNextCommittees(startPeriod, maxCount);
+    return updatesAndCommittees.map(u => res.json({
+      update: store.updateToJson(u.update),
+      syncCommittee: u.syncCommittee.map(c => toHexString(c)),
+    }));
   });
 
   return app;

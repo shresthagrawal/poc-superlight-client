@@ -6,6 +6,8 @@ import { LightClient } from '../src/client/light-client';
 
 const chainSize = 1000;
 const committeeSize = 100;
+const n = 2;
+const batchSize = 1;
 
 async function main() {
   await init('blst-native');
@@ -21,14 +23,14 @@ async function main() {
     committeeSize,
   );
 
-  const honestBeaconProver = new Prover(beaconStoreProverH);
-  const dishonestBeaconProver = new Prover(beaconStoreProverD);
+  const honestBeaconProver = new Prover(beaconStoreProverH, n);
+  const dishonestBeaconProver = new Prover(beaconStoreProverD, n);
 
   const beaconStoreVerifer = new DummyStoreVerifier(chainSize, committeeSize);
   const superLightClient = new SuperlightClient(beaconStoreVerifer, [
     dishonestBeaconProver,
     honestBeaconProver,
-  ]);
+  ], n);
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');
@@ -41,7 +43,7 @@ async function main() {
   const lightClient = new LightClient(beaconStoreVerifer, [
     dishonestBeaconProver,
     honestBeaconProver,
-  ]);
+  ], batchSize);
 
   console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();

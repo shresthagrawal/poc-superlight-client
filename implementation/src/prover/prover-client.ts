@@ -94,4 +94,17 @@ export class ProverClient<T> implements IProver<T> {
       syncCommittee: data.syncCommittee.map((c: string) => fromHexString(c)),
     };
   }
+
+  async getSyncUpdatesWithNextCommittees(startPeriod: number, maxCount: number): Promise<{
+    update: T;
+    syncCommittee: Uint8Array[];
+  }[]> {
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+    );
+    return data.map((d: any) => ({
+      update: this.store.updateFromJson(d.update),
+      syncCommittee: d.syncCommittee.map((c: string) => fromHexString(c)),
+    }));
+  }
 }
