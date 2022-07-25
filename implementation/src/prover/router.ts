@@ -11,10 +11,11 @@ const isDummy = process.env.DUMMY === 'true';
 const seed = process.env.seed || 'seedme';
 const chainSize = parseInt(process.env.CHAIN_SIZE || '100');
 const committeeSize = parseInt(process.env.COMMITTEE_SIZE || '10');
+const treeDegree = parseInt(process.env.treeDegree || '2');
 
-// This is a hack to make sure the server is setup first and 
-// the blocking operation of generating the dummy chain is 
-// done after the server is ready. This is required as the 
+// This is a hack to make sure the server is setup first and
+// the blocking operation of generating the dummy chain is
+// done after the server is ready. This is required as the
 // Heroku fails to deploy if the port is not binded in 60s.
 class ProverSetup {
   initCompleted: boolean = false;
@@ -27,31 +28,29 @@ class ProverSetup {
       this.store = isDummy
         ? new DummyStoreProver(isHonest, chainSize, committeeSize, seed)
         : new BeaconStoreProver(isHonest);
-      this.prover = new Prover(this.store);
+      this.prover = new Prover(this.store, treeDegree);
       this.initCompleted = true;
-    })
+    });
   }
 
   getProver() {
-    if(!this.prover)
-      throw new Error('prover not initialized');
+    if (!this.prover) throw new Error('prover not initialized');
     return this.prover as Prover<any>;
   }
 
   getStore() {
-    if(!this.store)
-      throw new Error('store not initialized');
+    if (!this.store) throw new Error('store not initialized');
     return this.store as ISyncStoreProver<any>;
   }
 }
 
 export default async function getApp() {
   const app = express();
-  const ps =  new ProverSetup();
+  const ps = new ProverSetup();
   ps.init();
 
   app.get('/sync-committee/mmr/leaf/:period', function (req, res) {
-    if(!ps.initCompleted)
+    if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const period =
@@ -65,7 +64,7 @@ export default async function getApp() {
   });
 
   app.get('/sync-committee/mmr', function (req, res) {
-    if(!ps.initCompleted)
+    if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const { rootHash, peaks } = prover.getMMRInfo();
@@ -79,7 +78,7 @@ export default async function getApp() {
   });
 
   app.get('/sync-committee/mmr/:treeRoot/node/:nodeHash', function (req, res) {
-    if(!ps.initCompleted)
+    if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const treeRoot = fromHexString(req.params.treeRoot);
@@ -92,7 +91,7 @@ export default async function getApp() {
   });
 
   app.get('/sync-update/:period', function (req, res) {
-    if(!ps.initCompleted)
+    if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const store = ps.getStore();
@@ -115,20 +114,26 @@ export default async function getApp() {
   });
 
   app.get('/sync-updates', function (req, res) {
-    if(!ps.initCompleted)
+    if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const store = ps.getStore();
     if (!req.query.startPeriod || !req.query.maxCount)
-      return res.status(400).json({ error: 'startPeriod or maxCount not provided' });
+      return res
+        .status(400)
+        .json({ error: 'startPeriod or maxCount not provided' });
     const startPeriod = parseInt(req.query.startPeriod as string);
     const maxCount = parseInt(req.query.maxCount as string);
-    const updatesAndCommittees =
-        prover.getSyncUpdatesWithNextCommittees(startPeriod, maxCount);
-    return updatesAndCommittees.map(u => res.json({
-      update: store.updateToJson(u.update),
-      syncCommittee: u.syncCommittee.map(c => toHexString(c)),
-    }));
+    const updatesAndCommittees = prover.getSyncUpdatesWithNextCommittees(
+      startPeriod,
+      maxCount,
+    );
+    return res.json(
+      updatesAndCommittees.map(u => ({
+        update: store.updateToJson(u.update),
+        syncCommittee: u.syncCommittee.map(c => toHexString(c)),
+      })),
+    );
   });
 
   return app;

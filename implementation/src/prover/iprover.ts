@@ -26,6 +26,6 @@ export interface IProver<T> {
 
   getSyncUpdatesWithNextCommittees(
     startPeriod: number,
-    maxCount: number
+    maxCount: number,
   ): AsyncOrSync<{ update: T; syncCommittee: Uint8Array[] }[]>;
 }

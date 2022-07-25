@@ -11,7 +11,7 @@ export class LightClient<T> {
   constructor(
     protected store: ISyncStoreVerifer<T>,
     protected provers: IProver<T>[],
-    protected batchSize: number = 5
+    protected batchSize: number = 5,
   ) {}
 
   // Returns the last valid sync committee
@@ -21,9 +21,16 @@ export class LightClient<T> {
     currentPeriod: number,
     startCommittee: Uint8Array[],
   ): Promise<{ syncCommittee: Uint8Array[]; period: number }> {
-    for (let batchStartPeriod = startPeriod; batchStartPeriod < currentPeriod; batchStartPeriod += this.batchSize) {
+    for (
+      let batchStartPeriod = startPeriod;
+      batchStartPeriod < currentPeriod;
+      batchStartPeriod += this.batchSize
+    ) {
       const updatesAndCommittees =
-        await prover.getSyncUpdatesWithNextCommittees(batchStartPeriod, this.batchSize);
+        await prover.getSyncUpdatesWithNextCommittees(
+          batchStartPeriod,
+          this.batchSize,
+        );
 
       for (let i = 0; i < updatesAndCommittees.length; i++) {
         const { syncCommittee, update } = updatesAndCommittees[i];
@@ -33,7 +40,9 @@ export class LightClient<T> {
           update,
         );
         if (!isUpdateValid) {
-          console.log(`Found invalid update at period(${batchStartPeriod + i})`);
+          console.log(
+            `Found invalid update at period(${batchStartPeriod + i})`,
+          );
           return {
             syncCommittee: startCommittee,
             period: batchStartPeriod + i,

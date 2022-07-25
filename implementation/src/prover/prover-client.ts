@@ -18,13 +18,12 @@ export class ProverClient<T> implements IProver<T> {
       const res = await axios.get(url);
       this.benchmark.increment(parseInt(res.headers['content-length']));
       return res.data;
-    } catch(e) {
+    } catch (e) {
       console.error(`Errror while fetching, retry left ${retry}`, e);
       if (retry > 0) {
         await wait(500);
         return await this.getRequest(url, retry - 1);
-      } else 
-        throw e;
+      } else throw e;
     }
   }
 
@@ -95,10 +94,15 @@ export class ProverClient<T> implements IProver<T> {
     };
   }
 
-  async getSyncUpdatesWithNextCommittees(startPeriod: number, maxCount: number): Promise<{
-    update: T;
-    syncCommittee: Uint8Array[];
-  }[]> {
+  async getSyncUpdatesWithNextCommittees(
+    startPeriod: number,
+    maxCount: number,
+  ): Promise<
+    {
+      update: T;
+      syncCommittee: Uint8Array[];
+    }[]
+  > {
     const data = await this.getRequest(
       `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
     );
