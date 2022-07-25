@@ -41,19 +41,22 @@ export function getRandomInt(max: number) {
 
 export const smallHexStr = (data: Uint8Array) => toHexString(data).slice(0, 8);
 
-export function getRandomBytesArray(
-  seed: string,
-  bytesPerElement: number,
-  elements: number,
-): Uint8Array[] {
-  const prng = seedrandom(seed);
-  return new Array(elements).fill(null).map(() => {
-    const res = new Uint8Array(bytesPerElement);
-    for (let i = 0; i < bytesPerElement; i++) {
-      res[i] = Math.floor(prng() * 256);
-    }
-    return res;
-  });
+export class RandomBytesGenerator {
+  prng: seedrandom.PRNG;
+
+  constructor(seed: string) {
+    this.prng = seedrandom(seed);
+  }
+
+  generateArray(bytesPerElement: number, elements: number): Uint8Array[] {
+    return new Array(elements).fill(null).map(() => {
+      const res = new Uint8Array(bytesPerElement);
+      for (let i = 0; i < bytesPerElement; i++) {
+        res[i] = Math.floor(this.prng() * 256);
+      }
+      return res;
+    });
+  }
 }
 
 export function numberToUint8Array(num: number): Uint8Array {

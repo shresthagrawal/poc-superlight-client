@@ -1,7 +1,7 @@
 import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
 import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import {
-  getRandomBytesArray,
+  RandomBytesGenerator,
   concatUint8Array,
   numberToUint8Array,
   isUint8ArrayEq,
@@ -43,12 +43,16 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     seed: string = 'seedme',
   ) {
     // generate committee using seed
-    const allCommitteePK = getRandomBytesArray(
-      seed,
-      32,
-      committeeSize * (size + 1),
-    ).map(entropy => SecretKey.fromKeygen(entropy));
-    let currentCommitteePK = allCommitteePK.slice(0, committeeSize);
+    const randomBytesGenerator = new RandomBytesGenerator(seed);
+    const nextCommitteePK = () =>
+      randomBytesGenerator
+        .generateArray(32, committeeSize)
+        .map(entropy => SecretKey.fromKeygen(entropy));
+
+    let currentCommitteePK = nextCommitteePK();
+    const genesisCommittee = currentCommitteePK.map(pk =>
+      pk.toPublicKey().toBytes(),
+    );
 
     // index staring which the store will be dishonest
     const dishonestyIndex = honest ? 0 : getRandomInt(size);
@@ -57,10 +61,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     this.syncUpdates = new Array(size).fill(null).map((_, i) => {
       if (honest || i < dishonestyIndex) {
         console.log(`Creating honest syncUpdates for period ${i}`);
-        const nextSyncCommitteePK = allCommitteePK.slice(
-          committeeSize * (i + 1),
-          committeeSize * (i + 2),
-        );
+        const nextSyncCommitteePK = nextCommitteePK();
         const nextCommittee = nextSyncCommitteePK.map(pk =>
           pk.toPublicKey().toBytes(),
         );
@@ -97,10 +98,8 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
         };
       }
     });
+
     // set sync committees based on sync updates
-    const genesisCommittee = allCommitteePK
-      .slice(0, committeeSize)
-      .map(pk => pk.toPublicKey().toBytes());
     this.syncCommittees = [
       genesisCommittee,
       ...this.syncUpdates.map(update => update.header.nextCommittee),
@@ -148,11 +147,10 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
     genesisSeed: string = 'seedme',
   ) {
     // generate genesis committee using genesis seed
-    const genesisCommitteePK = getRandomBytesArray(
-      genesisSeed,
-      32,
-      committeeSize,
-    ).map(entropy => SecretKey.fromKeygen(entropy));
+    const randomBytesGenerator = new RandomBytesGenerator(genesisSeed);
+    const genesisCommitteePK = randomBytesGenerator
+      .generateArray(32, committeeSize)
+      .map(entropy => SecretKey.fromKeygen(entropy));
     this.genesisSyncCommittee = genesisCommitteePK.map(pk =>
       pk.toPublicKey().toBytes(),
     );
