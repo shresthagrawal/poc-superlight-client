@@ -8,15 +8,24 @@ export class Prover<T> implements IProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   latestPeriod: number;
+  leaves: Uint8Array[];
 
-  constructor(public store: ISyncStoreProver<T>, n = 2) {
-    this.mmr = new MerkleMountainRange(digest, n);
-
+  constructor(public store: ISyncStoreProver<T>, protected n = 2) {
     const { startPeriod, syncCommittees } = store.getAllSyncCommittees();
     this.startPeriod = startPeriod;
     this.latestPeriod = startPeriod + syncCommittees.length - 1;
-    const leaves = syncCommittees.map(c => digest(concatUint8Array(c)));
-    this.mmr.init(leaves);
+    this.leaves = syncCommittees.map(c => digest(concatUint8Array(c)));
+
+    this.mmr = new MerkleMountainRange(digest, n);
+    this.mmr.init(this.leaves);
+  }
+
+  setN(n: number) {
+    if (this.n === n) return;
+
+    this.n = n;
+    this.mmr = new MerkleMountainRange(digest, n);
+    this.mmr.init(this.leaves);
   }
 
   getLeafWithProof(period: number | 'latest'): {

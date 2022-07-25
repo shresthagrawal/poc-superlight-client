@@ -19,10 +19,24 @@ export class ProverClient<T> implements IProver<T> {
       this.benchmark.increment(parseInt(res.headers['content-length']));
       return res.data;
     } catch (e) {
-      console.error(`Errror while fetching, retry left ${retry}`, e);
+      console.error(`Error while fetching, retry left ${retry}`, e);
       if (retry > 0) {
         await wait(500);
         return await this.getRequest(url, retry - 1);
+      } else throw e;
+    }
+  }
+
+  protected async postRequest(url: string, retry: number = 5): Promise<any> {
+    try {
+      const res = await axios.post(url);
+      this.benchmark.increment(parseInt(res.headers['content-length']));
+      return res.data;
+    } catch (e) {
+      console.error(`Error while fetching, retry left ${retry}`, e);
+      if (retry > 0) {
+        await wait(500);
+        return await this.postRequest(url, retry - 1);
       } else throw e;
     }
   }
@@ -110,5 +124,10 @@ export class ProverClient<T> implements IProver<T> {
       update: this.store.updateFromJson(d.update),
       syncCommittee: d.syncCommittee.map((c: string) => fromHexString(c)),
     }));
+  }
+
+  async setN(n: number) {
+    const data = await this.postRequest(`${this.serverUrl}/tree-degree?n=${n}`);
+    if (!data.success) throw new Error('set tree-degree failed');
   }
 }

@@ -136,5 +136,20 @@ export default async function getApp() {
     );
   });
 
+  app.post('/tree-degree', function (req, res) {
+    if (!ps.initCompleted)
+      return res.status(400).json({ error: 'Prover not initialised' });
+    const prover = ps.getProver();
+    const store = ps.getStore();
+    if (!req.query.n)
+      return res.status(400).json({ error: 'tree-degree (n) not specified' });
+    const n = parseInt(req.query.n as string);
+    prover.setN(n);
+
+    return res.json({
+      success: true,
+    });
+  });
+
   return app;
 }
