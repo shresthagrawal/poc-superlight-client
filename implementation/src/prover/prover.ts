@@ -11,10 +11,10 @@ export class Prover<T> implements IProver<T> {
   leaves: Uint8Array[];
 
   constructor(public store: ISyncStoreProver<T>, protected n = 2) {
-    const { startPeriod, syncCommittees } = store.getAllSyncCommittees();
+    const { startPeriod, hashes } = store.getAllSyncCommitteeHashes();
     this.startPeriod = startPeriod;
-    this.latestPeriod = startPeriod + syncCommittees.length - 1;
-    this.leaves = syncCommittees.map(c => digest(concatUint8Array(c)));
+    this.latestPeriod = startPeriod + hashes.length - 1;
+    this.leaves = hashes;
 
     this.mmr = new MerkleMountainRange(digest, n);
     this.mmr.init(this.leaves);

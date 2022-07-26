@@ -11,18 +11,31 @@ import { digest } from '@chainsafe/as-sha256';
 import { fromHexString, toHexString } from '@chainsafe/ssz';
 
 export type Committee = Uint8Array[];
+type CommitteeOptimised = ArrayBufferLike[];
 
-export type Dummyheader = {
+export type DummyHeader = {
   nextCommittee: Committee;
   epoch: number;
 };
 
+// The optimised data structures uses less memory
+type DummyHeaderOptimised = {
+  nextCommittee: CommitteeOptimised;
+  epoch: number;
+};
+
 export type DummyUpdate = {
-  header: Dummyheader;
+  header: DummyHeader;
   aggregateSignature: Uint8Array;
 };
 
-function hashHeader(header: Dummyheader): Uint8Array {
+// The optimised data structures uses less memory
+type DummyUpdateOptimised = {
+  header: DummyHeaderOptimised;
+  aggregateSignature: ArrayBufferLike;
+};
+
+function hashHeader(header: DummyHeader): Uint8Array {
   return digest(
     concatUint8Array([
       ...header.nextCommittee,
@@ -31,10 +44,31 @@ function hashHeader(header: Dummyheader): Uint8Array {
   );
 }
 
+function toOptimisedUpdate(update: DummyUpdate): DummyUpdateOptimised {
+  return {
+    header: {
+      epoch: update.header.epoch,
+      nextCommittee: update.header.nextCommittee.map(u => u.buffer),
+    },
+    aggregateSignature: update.aggregateSignature.buffer,
+  };
+}
+
+function fromOptimisedUpdate(update: DummyUpdateOptimised): DummyUpdate {
+  return {
+    header: {
+      epoch: update.header.epoch,
+      nextCommittee: update.header.nextCommittee.map(u => new Uint8Array(u)),
+    },
+    aggregateSignature: new Uint8Array(update.aggregateSignature),
+  };
+}
+
 export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   startPeriod: number;
-  syncUpdates: DummyUpdate[];
-  syncCommittees: Uint8Array[][];
+  syncUpdatesOptimised: DummyUpdateOptimised[];
+  syncCommitteeHashes: Uint8Array[];
+  genesisCommittee: Uint8Array[];
 
   constructor(
     honest: boolean = true,
@@ -44,29 +78,32 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   ) {
     // generate committee using seed
     const randomBytesGenerator = new RandomBytesGenerator(seed);
+
     const nextCommitteePK = () =>
       randomBytesGenerator
         .generateArray(32, committeeSize)
         .map(entropy => SecretKey.fromKeygen(entropy));
+    const getCommitteeFromPK = (cPK: SecretKey[]) =>
+      cPK.map(pk => pk.toPublicKey().toBytes());
+    const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
 
     let currentCommitteePK = nextCommitteePK();
-    const genesisCommittee = currentCommitteePK.map(pk =>
-      pk.toPublicKey().toBytes(),
-    );
+    this.genesisCommittee = getCommitteeFromPK(currentCommitteePK);
+    this.syncCommitteeHashes = [getCommitteeHash(this.genesisCommittee)];
 
     // index staring which the store will be dishonest
     const dishonestyIndex = honest ? 0 : getRandomInt(size);
 
     // generate dummy sync updates
-    this.syncUpdates = new Array(size).fill(null).map((_, i) => {
+    this.syncUpdatesOptimised = new Array(size).fill(null).map((_, i) => {
       if (honest || i < dishonestyIndex) {
         console.log(`Creating honest syncUpdates for period ${i}`);
         const nextSyncCommitteePK = nextCommitteePK();
-        const nextCommittee = nextSyncCommitteePK.map(pk =>
-          pk.toPublicKey().toBytes(),
-        );
+        const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
+        this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
+
         const header = {
-          nextCommittee,
+          nextCommittee: nextCommittee,
           epoch: i,
         };
         const headerHash = hashHeader(header);
@@ -74,56 +111,55 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
         const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
         const aggregateSignature = Signature.aggregate(signatures).toBytes();
         currentCommitteePK = nextSyncCommitteePK;
-        return {
+        const update = {
           header,
           aggregateSignature,
         };
+        return toOptimisedUpdate(update);
       } else {
         console.log(`Creating malicious syncUpdates for period ${i}`);
         // generate malicious keys
         const nextSyncCommitteePK = new Array(committeeSize)
           .fill(null)
           .map(i => SecretKey.fromKeygen());
-        const nextCommittee = nextSyncCommitteePK.map(pk =>
-          pk.toPublicKey().toBytes(),
-        );
+        const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
+        this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
+
         const header = {
           nextCommittee,
           epoch: i,
         };
         // for dishonest updates store 0 signature
-        return {
+        const update = {
           header,
           aggregateSignature: new Uint8Array(96),
         };
+        return toOptimisedUpdate(update);
       }
     });
-
-    // set sync committees based on sync updates
-    this.syncCommittees = [
-      genesisCommittee,
-      ...this.syncUpdates.map(update => update.header.nextCommittee),
-    ];
 
     this.startPeriod = 0;
   }
 
-  getAllSyncCommittees(): {
+  getAllSyncCommitteeHashes(): {
     startPeriod: number;
-    syncCommittees: Uint8Array[][];
+    hashes: Uint8Array[];
   } {
     return {
       startPeriod: this.startPeriod,
-      syncCommittees: this.syncCommittees,
+      hashes: this.syncCommitteeHashes,
     };
   }
 
   getSyncCommittee(period: number): Uint8Array[] {
-    return this.syncCommittees[period];
+    if (period === 0) return this.genesisCommittee;
+    return this.syncUpdatesOptimised[period - 1].header.nextCommittee.map(
+      b => new Uint8Array(b),
+    );
   }
 
   getSyncUpdate(period: number): DummyUpdate {
-    return this.syncUpdates[period];
+    return fromOptimisedUpdate(this.syncUpdatesOptimised[period]);
   }
 
   updateToJson(update: DummyUpdate): any {

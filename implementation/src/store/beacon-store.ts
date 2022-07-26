@@ -1,4 +1,5 @@
 import { ssz, altair } from '@chainsafe/lodestar-types';
+import { digest } from '@chainsafe/as-sha256';
 import {
   defaultChainConfig,
   createIBeaconConfig,
@@ -10,18 +11,18 @@ import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/l
 import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
 import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
-import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 import {
   isUint8ArrayEq,
   isCommitteeSame,
   getRandomInt,
   generateRandomSyncCommittee,
+  concatUint8Array,
 } from '../utils';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   defaultChainConfig,
-  parseInt(SyncUpdatesJson[SyncUpdatesJson.length - 1].header.slot),
+  parseInt(GenesisSnapshotJson.currentSlot),
 );
 
 // TODO: fix types
@@ -35,7 +36,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   constructor(
     // This is required for testing purpose to make dishonest clients
     public honest: boolean = true,
-    syncUpdatesJson: any[] = SyncUpdatesJson,
+    syncUpdatesJson: any[] = require('./data/beacon-sync-updates.json'),
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
     this.syncUpdates = syncUpdatesJson.map(u =>
@@ -80,13 +81,13 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     }
   }
 
-  getAllSyncCommittees(): {
+  getAllSyncCommitteeHashes(): {
     startPeriod: number;
-    syncCommittees: Uint8Array[][];
+    hashes: Uint8Array[];
   } {
     return {
       startPeriod: this.startPeriod,
-      syncCommittees: this.syncCommittees,
+      hashes: this.syncCommittees.map(c => digest(concatUint8Array(c))),
     };
   }
 

@@ -1,7 +1,7 @@
 export interface ISyncStoreProver<T> {
-  getAllSyncCommittees(): {
+  getAllSyncCommitteeHashes(): {
     startPeriod: number;
-    syncCommittees: Uint8Array[][];
+    hashes: Uint8Array[];
   };
 
   getSyncCommittee(period: number): Uint8Array[];
