@@ -79,10 +79,12 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     // generate committee using seed
     const randomBytesGenerator = new RandomBytesGenerator(seed);
 
-    const nextCommitteePK = () =>
-      randomBytesGenerator
-        .generateArray(32, committeeSize)
-        .map(entropy => SecretKey.fromKeygen(entropy));
+    const nextCommitteePK = (isMalicious: boolean = false) =>
+      isMalicious
+        ? new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen())
+        : randomBytesGenerator
+            .generateArray(32, committeeSize)
+            .map(entropy => SecretKey.fromKeygen(entropy));
     const getCommitteeFromPK = (cPK: SecretKey[]) =>
       cPK.map(pk => pk.toPublicKey().toBytes());
     const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
@@ -92,50 +94,37 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     this.syncCommitteeHashes = [getCommitteeHash(this.genesisCommittee)];
 
     // index staring which the store will be dishonest
-    const dishonestyIndex = honest ? 0 : getRandomInt(size);
+    const dishonestyIndex = honest ? size : getRandomInt(size);
+    if (!honest) console.log(`Dishonesty index ${dishonestyIndex}`);
 
     // generate dummy sync updates
     this.syncUpdatesOptimised = new Array(size).fill(null).map((_, i) => {
-      if (honest || i < dishonestyIndex) {
-        console.log(`Creating honest syncUpdates for period ${i}`);
-        const nextSyncCommitteePK = nextCommitteePK();
-        const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
-        this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
+      console.log(`Creating syncUpdates for period ${i}`);
+      const nextSyncCommitteePK = nextCommitteePK(i >= dishonestyIndex);
+      const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
+      this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
 
-        const header = {
-          nextCommittee: nextCommittee,
-          epoch: i,
-        };
-        const headerHash = hashHeader(header);
-        // generate correct signature for honest updates
-        const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
-        const aggregateSignature = Signature.aggregate(signatures).toBytes();
-        currentCommitteePK = nextSyncCommitteePK;
-        const update = {
-          header,
-          aggregateSignature,
-        };
-        return toOptimisedUpdate(update);
+      const header = {
+        nextCommittee: nextCommittee,
+        epoch: i,
+      };
+
+      let aggregateSignature: Uint8Array;
+      if (i === dishonestyIndex) {
+        aggregateSignature = new Uint8Array(96);
       } else {
-        console.log(`Creating malicious syncUpdates for period ${i}`);
-        // generate malicious keys
-        const nextSyncCommitteePK = new Array(committeeSize)
-          .fill(null)
-          .map(i => SecretKey.fromKeygen());
-        const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
-        this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
-
-        const header = {
-          nextCommittee,
-          epoch: i,
-        };
-        // for dishonest updates store 0 signature
-        const update = {
-          header,
-          aggregateSignature: new Uint8Array(96),
-        };
-        return toOptimisedUpdate(update);
+        // generate correct signature for honest updates
+        const headerHash = hashHeader(header);
+        const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
+        aggregateSignature = Signature.aggregate(signatures).toBytes();
       }
+
+      currentCommitteePK = nextSyncCommitteePK;
+      const update = {
+        header,
+        aggregateSignature,
+      };
+      return toOptimisedUpdate(update);
     });
 
     this.startPeriod = 0;
