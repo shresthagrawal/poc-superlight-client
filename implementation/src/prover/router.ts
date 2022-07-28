@@ -4,7 +4,8 @@ import { BeaconStoreProver } from '../store/beacon-store';
 import { DummyStoreProver } from '../store/dummy-store';
 import { ISyncStoreProver } from '../store/isync-store';
 import { Prover } from './prover';
-import { fromHexString, toHexString } from '@chainsafe/ssz';
+import { fromHexString } from '@chainsafe/ssz';
+import { LeafWithProofSSZ, MMRInfoSSZ, NodeSSZ } from './ssz-types';
 
 const isHonest = process.env.HONEST !== 'false';
 const isDummy = process.env.DUMMY === 'true';
@@ -55,26 +56,18 @@ export default async function getApp() {
     const prover = ps.getProver();
     const period =
       req.params.period === 'latest' ? 'latest' : parseInt(req.params.period);
-    const { syncCommittee, rootHash, proof } = prover.getLeafWithProof(period);
-    return res.json({
-      syncCommittee: syncCommittee.map(s => toHexString(s)),
-      rootHash: toHexString(rootHash),
-      proof: proof.map(l => l.map(p => toHexString(p))),
-    });
+    const leafWithProof = prover.getLeafWithProof(period);
+    res.set('Content-Type', 'application/octet-stream');
+    res.end(LeafWithProofSSZ.serialize(leafWithProof));
   });
 
   app.get('/sync-committee/mmr', function (req, res) {
     if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
-    const { rootHash, peaks } = prover.getMMRInfo();
-    return res.json({
-      rootHash: toHexString(rootHash),
-      peaks: peaks.map(p => ({
-        rootHash: toHexString(p.rootHash),
-        size: p.size,
-      })),
-    });
+    const mmrInfo = prover.getMMRInfo();
+    res.set('Content-Type', 'application/octet-stream');
+    res.end(MMRInfoSSZ.serialize(mmrInfo));
   });
 
   app.get('/sync-committee/mmr/:treeRoot/node/:nodeHash', function (req, res) {
@@ -83,11 +76,14 @@ export default async function getApp() {
     const prover = ps.getProver();
     const treeRoot = fromHexString(req.params.treeRoot);
     const nodeHash = fromHexString(req.params.nodeHash);
-    const { isLeaf, children } = prover.getNode(treeRoot, nodeHash);
-    return res.json({
-      isLeaf,
-      children: children && children.map(c => toHexString(c)),
-    });
+    const node = prover.getNode(treeRoot, nodeHash);
+    res.set('Content-Type', 'application/octet-stream');
+    res.end(
+      NodeSSZ.serialize({
+        isLeaf: node.isLeaf,
+        children: node.children || [],
+      }),
+    );
   });
 
   app.get('/sync-updates', function (req, res) {

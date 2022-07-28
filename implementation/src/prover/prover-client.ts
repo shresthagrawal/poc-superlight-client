@@ -1,10 +1,16 @@
 import axios from 'axios';
-import { fromHexString, toHexString } from '@chainsafe/ssz';
+import { toHexString } from '@chainsafe/ssz';
 import { IProver } from './iprover';
 import { Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
 import { Benchmark } from '../benchmark';
 import { wait } from '../utils';
+import {
+  LeafWithProofSSZ,
+  MMRInfoSSZ,
+  NodeSSZ,
+  deepBufferToUint8Array,
+} from './ssz-types';
 
 export class ProverClient<T> implements IProver<T> {
   constructor(
@@ -60,28 +66,22 @@ export class ProverClient<T> implements IProver<T> {
   }> {
     const data = await this.getRequest(
       `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
+      true,
     );
-    return {
-      syncCommittee: data.syncCommittee.map((c: string) => fromHexString(c)),
-      rootHash: fromHexString(data.rootHash),
-      proof: data.proof.map((l: string[]) =>
-        l.map((c: string) => fromHexString(c)),
-      ),
-    };
+    const leafWithProof = LeafWithProofSSZ.deserialize(data);
+    return deepBufferToUint8Array(leafWithProof);
   }
 
   async getMMRInfo(): Promise<{
     rootHash: Uint8Array;
     peaks: Peaks;
   }> {
-    const data = await this.getRequest(`${this.serverUrl}/sync-committee/mmr`);
-    return {
-      rootHash: fromHexString(data.rootHash),
-      peaks: data.peaks.map((p: { size: number; rootHash: string }) => ({
-        size: p.size,
-        rootHash: fromHexString(p.rootHash),
-      })),
-    };
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-committee/mmr`,
+      true,
+    );
+    const mmrInfo = MMRInfoSSZ.deserialize(data);
+    return deepBufferToUint8Array(mmrInfo);
   }
 
   async getNode(
@@ -92,12 +92,10 @@ export class ProverClient<T> implements IProver<T> {
       `${this.serverUrl}/sync-committee/mmr/${toHexString(
         treeRoot,
       )}/node/${toHexString(nodeHash)}`,
+      true,
     );
-    return {
-      isLeaf: data.isLeaf,
-      children:
-        data.children && data.children.map((c: string) => fromHexString(c)),
-    };
+    const nodeInfo = NodeSSZ.deserialize(data);
+    return deepBufferToUint8Array(nodeInfo);
   }
 
   async getSyncUpdates(startPeriod: number, maxCount: number): Promise<T[]> {
