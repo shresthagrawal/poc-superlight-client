@@ -26,20 +26,17 @@ export class LightClient<T> {
       batchStartPeriod < currentPeriod;
       batchStartPeriod += this.batchSize
     ) {
-      const updatesAndCommittees =
-        await prover.getSyncUpdatesWithNextCommittees(
-          batchStartPeriod,
-          this.batchSize,
-        );
+      const updates = await prover.getSyncUpdates(
+        batchStartPeriod,
+        this.batchSize,
+      );
 
-      for (let i = 0; i < updatesAndCommittees.length; i++) {
-        const { syncCommittee, update } = updatesAndCommittees[i];
-        const isUpdateValid = this.store.syncUpdateVerify(
+      for (let i = 0; i < updates.length; i++) {
+        const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
           startCommittee,
-          syncCommittee,
-          update,
+          updates[i],
         );
-        if (!isUpdateValid) {
+        if (!(validOrCommittee as boolean)) {
           console.log(
             `Found invalid update at period(${batchStartPeriod + i})`,
           );
@@ -48,7 +45,7 @@ export class LightClient<T> {
             period: batchStartPeriod + i,
           };
         }
-        startCommittee = syncCommittee;
+        startCommittee = validOrCommittee as Uint8Array[];
       }
     }
     return {

@@ -68,36 +68,13 @@ export class Prover<T> implements IProver<T> {
     };
   }
 
-  getSyncUpdate(period: number): T {
-    return this.store.getSyncUpdate(period);
-  }
-
-  getSyncUpdateWithNextCommittee(period: number): {
-    update: T;
-    syncCommittee: Uint8Array[];
-  } {
-    return {
-      update: this.store.getSyncUpdate(period),
-      syncCommittee: this.store.getSyncCommittee(period + 1),
-    };
-  }
-
-  getSyncUpdatesWithNextCommittees(
-    startPeriod: number,
-    maxCount: number,
-  ): {
-    update: T;
-    syncCommittee: Uint8Array[];
-  }[] {
+  getSyncUpdates(startPeriod: number, maxCount: number): T[] {
     const count =
       startPeriod + maxCount - 1 >= this.latestPeriod
         ? this.latestPeriod - startPeriod
         : maxCount;
     return Array(count)
       .fill(0)
-      .map((_, i) => ({
-        update: this.store.getSyncUpdate(startPeriod + i),
-        syncCommittee: this.store.getSyncCommittee(startPeriod + i + 1),
-      }));
+      .map((_, i) => this.store.getSyncUpdate(startPeriod + i));
   }
 }

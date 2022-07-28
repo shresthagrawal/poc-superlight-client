@@ -94,14 +94,14 @@ export class SuperlightClient<T> {
 
       // ask both parties for sync update
       // related to previous period
-      const update1 = await prover1.getSyncUpdate(lastPeriod);
+      const update1 = (await prover1.getSyncUpdates(lastPeriod, 1))[0];
       is1Correct = this.store.syncUpdateVerify(
         prevCommittee,
         committee1,
         update1,
       );
 
-      const update2 = await prover2.getSyncUpdate(lastPeriod);
+      const update2 = (await prover2.getSyncUpdates(lastPeriod, 1))[0];
       is2Correct = this.store.syncUpdateVerify(
         prevCommittee,
         committee2,

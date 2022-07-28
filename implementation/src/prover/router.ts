@@ -90,29 +90,6 @@ export default async function getApp() {
     });
   });
 
-  app.get('/sync-update/:period', function (req, res) {
-    if (!ps.initCompleted)
-      return res.status(400).json({ error: 'Prover not initialised' });
-    const prover = ps.getProver();
-    const store = ps.getStore();
-    const period =
-      req.params.period === 'latest' ? 'latest' : parseInt(req.params.period);
-    const nextCommittee = req.query.nextCommittee == 'true';
-    if (period === 'latest')
-      return res.status(400).json({ error: 'Invalid period recieved' });
-    if (nextCommittee) {
-      const { update, syncCommittee } =
-        prover.getSyncUpdateWithNextCommittee(period);
-      return res.json({
-        update: store.updateToJson(update),
-        syncCommittee: syncCommittee.map(c => toHexString(c)),
-      });
-    } else {
-      const update = prover.getSyncUpdate(period);
-      return res.json(store.updateToJson(update));
-    }
-  });
-
   app.get('/sync-updates', function (req, res) {
     if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
@@ -124,16 +101,10 @@ export default async function getApp() {
         .json({ error: 'startPeriod or maxCount not provided' });
     const startPeriod = parseInt(req.query.startPeriod as string);
     const maxCount = parseInt(req.query.maxCount as string);
-    const updatesAndCommittees = prover.getSyncUpdatesWithNextCommittees(
-      startPeriod,
-      maxCount,
-    );
-    return res.json(
-      updatesAndCommittees.map(u => ({
-        update: store.updateToJson(u.update),
-        syncCommittee: u.syncCommittee.map(c => toHexString(c)),
-      })),
-    );
+    const updates = prover.getSyncUpdates(startPeriod, maxCount);
+    const updatesBytes = store.updatesToBytes(updates, maxCount);
+    res.set('Content-Type', 'application/octet-stream');
+    res.end(updatesBytes);
   });
 
   app.post('/tree-degree', function (req, res) {

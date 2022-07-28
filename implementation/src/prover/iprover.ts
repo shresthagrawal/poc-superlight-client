@@ -18,14 +18,5 @@ export interface IProver<T> {
     nodeHash: Uint8Array,
   ): AsyncOrSync<{ isLeaf: boolean; children?: Uint8Array[] }>;
 
-  getSyncUpdate(period: number): AsyncOrSync<T>;
-
-  getSyncUpdateWithNextCommittee(
-    period: number,
-  ): AsyncOrSync<{ update: T; syncCommittee: Uint8Array[] }>;
-
-  getSyncUpdatesWithNextCommittees(
-    startPeriod: number,
-    maxCount: number,
-  ): AsyncOrSync<{ update: T; syncCommittee: Uint8Array[] }[]>;
+  getSyncUpdates(startPeriod: number, maxCount: number): AsyncOrSync<T[]>;
 }

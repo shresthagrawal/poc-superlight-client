@@ -8,12 +8,18 @@ import {
   getRandomInt,
 } from '../utils';
 import { digest } from '@chainsafe/as-sha256';
-import { fromHexString, toHexString } from '@chainsafe/ssz';
+import {
+  ContainerType,
+  VectorCompositeType,
+  ByteVectorType,
+  UintNumberType,
+  ListCompositeType,
+} from '@chainsafe/ssz';
 
-export type Committee = Uint8Array[];
+type Committee = Uint8Array[];
 type CommitteeOptimised = ArrayBufferLike[];
 
-export type DummyHeader = {
+type DummyHeader = {
   nextCommittee: Committee;
   epoch: number;
 };
@@ -24,7 +30,7 @@ type DummyHeaderOptimised = {
   epoch: number;
 };
 
-export type DummyUpdate = {
+type DummyUpdate = {
   header: DummyHeader;
   aggregateSignature: Uint8Array;
 };
@@ -64,11 +70,25 @@ function fromOptimisedUpdate(update: DummyUpdateOptimised): DummyUpdate {
   };
 }
 
+function getUpdateSSZ(committeeSize: number) {
+  const BLSPubkey = new ByteVectorType(48);
+  const CommitteeSSZ = new VectorCompositeType(BLSPubkey, committeeSize);
+  const DummyHeaderSSZ = new ContainerType({
+    nextCommittee: CommitteeSSZ,
+    epoch: new UintNumberType(8),
+  });
+  return new ContainerType({
+    header: DummyHeaderSSZ,
+    aggregateSignature: new ByteVectorType(96),
+  });
+}
+
 export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   startPeriod: number;
   syncUpdatesOptimised: DummyUpdateOptimised[];
   syncCommitteeHashes: Uint8Array[];
   genesisCommittee: Uint8Array[];
+  updateSSZ: ContainerType<any>;
 
   constructor(
     honest: boolean = true,
@@ -76,6 +96,8 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     committeeSize: number = 10,
     seed: string = 'seedme',
   ) {
+    this.updateSSZ = getUpdateSSZ(committeeSize);
+
     // generate committee using seed
     const randomBytesGenerator = new RandomBytesGenerator(seed);
 
@@ -151,26 +173,23 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     return fromOptimisedUpdate(this.syncUpdatesOptimised[period]);
   }
 
-  updateToJson(update: DummyUpdate): any {
-    return {
-      header: {
-        nextCommittee: update.header.nextCommittee.map(c => toHexString(c)),
-        epoch: update.header.epoch,
-      },
-      aggregateSignature: toHexString(update.aggregateSignature),
-    };
+  updatesToBytes(update: DummyUpdate[], maxItems: number): Uint8Array {
+    return new ListCompositeType(this.updateSSZ, maxItems).serialize(update);
   }
 }
 
 export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
   genesisSyncCommittee: Uint8Array[];
   genesisPeriod: number;
+  updateSSZ: ContainerType<any>;
 
   constructor(
     protected size: number = 100,
     committeeSize: number = 10,
     genesisSeed: string = 'seedme',
   ) {
+    this.updateSSZ = getUpdateSSZ(committeeSize);
+
     // generate genesis committee using genesis seed
     const randomBytesGenerator = new RandomBytesGenerator(genesisSeed);
     const genesisCommitteePK = randomBytesGenerator
@@ -180,6 +199,25 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
       pk.toPublicKey().toBytes(),
     );
     this.genesisPeriod = 0;
+  }
+
+  syncUpdateVerifyGetCommittee(
+    prevCommittee: Uint8Array[],
+    update: DummyUpdate,
+  ): false | Uint8Array[] {
+    // verify if the aggregate signature is valid
+    const headerHash = hashHeader(update.header);
+    const committeeKeys = prevCommittee.map(pk => PublicKey.fromBytes(pk));
+    try {
+      const isAggregateSignatureValid = Signature.fromBytes(
+        update.aggregateSignature,
+      ).verifyAggregate(committeeKeys, headerHash);
+      if (!isAggregateSignatureValid) return false;
+      return update.header.nextCommittee;
+    } catch (e) {
+      // console.error(`Signature Validation Failed ${e}`);
+      return false;
+    }
   }
 
   syncUpdateVerify(
@@ -219,15 +257,11 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
     return this.genesisPeriod;
   }
 
-  updateFromJson(jsonUpdate: any): DummyUpdate {
-    return {
-      header: {
-        nextCommittee: jsonUpdate.header.nextCommittee.map((c: string) =>
-          fromHexString(c),
-        ),
-        epoch: jsonUpdate.header.epoch,
-      },
-      aggregateSignature: fromHexString(jsonUpdate.aggregateSignature),
-    };
+  updatesFromBytes(bytesUpdates: Uint8Array, maxItems: number): DummyUpdate[] {
+    const updatesBuffer = new ListCompositeType(
+      this.updateSSZ,
+      maxItems,
+    ).deserialize(bytesUpdates) as DummyUpdateOptimised[];
+    return updatesBuffer.map(u => fromOptimisedUpdate(u));
   }
 }

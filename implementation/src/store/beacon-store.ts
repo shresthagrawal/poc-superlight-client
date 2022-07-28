@@ -6,6 +6,7 @@ import {
   IBeaconConfig,
 } from '@chainsafe/lodestar-config';
 import { PublicKey } from '@chainsafe/bls';
+import { ListCompositeType } from '@chainsafe/ssz';
 import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
 import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
 import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
@@ -109,8 +110,12 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     return this.syncUpdates[index];
   }
 
-  updateToJson(update: BeaconUpdate) {
-    return ssz.altair.LightClientUpdate.toJson(update);
+  updatesToBytes(update: BeaconUpdate[], maxItems: number): Uint8Array {
+    // TODO: check the reason for type error
+    return new ListCompositeType(
+      ssz.altair.LightClientUpdate as any,
+      maxItems,
+    ).serialize(update);
   }
 }
 
@@ -159,6 +164,24 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     };
   }
 
+  syncUpdateVerifyGetCommittee(
+    prevCommittee: Uint8Array[],
+    update: BeaconUpdate,
+  ): false | Uint8Array[] {
+    const prevCommitteeFast = this.deserializeSyncCommittee(prevCommittee);
+    try {
+      // check if the update has valid signatures
+      assertValidLightClientUpdate(
+        this.beaconConfig,
+        prevCommitteeFast,
+        update,
+      );
+      return update.nextSyncCommittee.pubkeys;
+    } catch (e) {
+      return false;
+    }
+  }
+
   syncUpdateVerify(
     prevCommittee: Uint8Array[],
     currentCommittee: Uint8Array[],
@@ -197,7 +220,11 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     return this.genesisPeriod;
   }
 
-  updateFromJson(jsonUpdate: any) {
-    return ssz.altair.LightClientUpdate.fromJson(jsonUpdate);
+  updatesFromBytes(bytesUpdates: Uint8Array, maxItems: number): BeaconUpdate[] {
+    // TODO: check the reason for type error
+    return new ListCompositeType(
+      ssz.altair.LightClientUpdate as any,
+      maxItems,
+    ).deserialize(bytesUpdates);
   }
 }

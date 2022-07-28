@@ -13,32 +13,44 @@ export class ProverClient<T> implements IProver<T> {
     protected benchmark: Benchmark,
   ) {}
 
-  protected async getRequest(url: string, retry: number = 5): Promise<any> {
+  protected async request(
+    method: 'GET' | 'POST',
+    url: string,
+    isBuffer: boolean = false,
+    retry: number = 5,
+  ): Promise<any> {
     try {
-      const res = await axios.get(url);
+      const res = await axios({
+        method,
+        url,
+        responseType: isBuffer ? 'arraybuffer' : undefined,
+      });
+
       this.benchmark.increment(parseInt(res.headers['content-length']));
       return res.data;
     } catch (e) {
       console.error(`Error while fetching, retry left ${retry}`, e);
       if (retry > 0) {
         await wait(500);
-        return await this.getRequest(url, retry - 1);
+        return await this.request(method, url, isBuffer, retry - 1);
       } else throw e;
     }
   }
 
-  protected async postRequest(url: string, retry: number = 5): Promise<any> {
-    try {
-      const res = await axios.post(url);
-      this.benchmark.increment(parseInt(res.headers['content-length']));
-      return res.data;
-    } catch (e) {
-      console.error(`Error while fetching, retry left ${retry}`, e);
-      if (retry > 0) {
-        await wait(500);
-        return await this.postRequest(url, retry - 1);
-      } else throw e;
-    }
+  protected async getRequest(
+    url: string,
+    isBuffer: boolean = false,
+    retry: number = 5,
+  ): Promise<any> {
+    return this.request('GET', url, isBuffer, retry);
+  }
+
+  protected async postRequest(
+    url: string,
+    isBuffer: boolean = false,
+    retry: number = 5,
+  ): Promise<any> {
+    return this.request('POST', url, isBuffer, retry);
   }
 
   async getLeafWithProof(period: number | 'latest'): Promise<{
@@ -88,42 +100,12 @@ export class ProverClient<T> implements IProver<T> {
     };
   }
 
-  async getSyncUpdate(period: number | 'latest'): Promise<T> {
-    const data = await this.getRequest(
-      `${this.serverUrl}/sync-update/${period}`,
-    );
-    return this.store.updateFromJson(data);
-  }
-
-  async getSyncUpdateWithNextCommittee(period: number): Promise<{
-    update: T;
-    syncCommittee: Uint8Array[];
-  }> {
-    const data = await this.getRequest(
-      `${this.serverUrl}/sync-update/${period}?nextCommittee=true`,
-    );
-    return {
-      update: this.store.updateFromJson(data.update),
-      syncCommittee: data.syncCommittee.map((c: string) => fromHexString(c)),
-    };
-  }
-
-  async getSyncUpdatesWithNextCommittees(
-    startPeriod: number,
-    maxCount: number,
-  ): Promise<
-    {
-      update: T;
-      syncCommittee: Uint8Array[];
-    }[]
-  > {
+  async getSyncUpdates(startPeriod: number, maxCount: number): Promise<T[]> {
     const data = await this.getRequest(
       `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+      true,
     );
-    return data.map((d: any) => ({
-      update: this.store.updateFromJson(d.update),
-      syncCommittee: d.syncCommittee.map((c: string) => fromHexString(c)),
-    }));
+    return this.store.updatesFromBytes(data, maxCount);
   }
 
   async setN(n: number) {
