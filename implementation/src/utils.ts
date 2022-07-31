@@ -1,9 +1,10 @@
+import Decimal from 'decimal.js';
 import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
 import * as seedrandom from 'seedrandom';
 
 export function logFloor(x: number, base: number = 2) {
-  return Math.floor(Math.log(x) / Math.log(base));
+  return Decimal.log(x, base).floor().toNumber();
 }
 
 export function concatUint8Array(data: Uint8Array[]) {
