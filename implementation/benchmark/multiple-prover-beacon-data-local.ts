@@ -30,7 +30,11 @@ async function main() {
   console.log(allProvers.map(p => p.store.honest));
 
   const beaconStoreVerifer = new BeaconStoreVerifier();
-  const superLightClient = new SuperlightClient(beaconStoreVerifer, allProvers, n);
+  const superLightClient = new SuperlightClient(
+    beaconStoreVerifer,
+    allProvers,
+    n,
+  );
   console.time('SuperLightClient Sync Time');
   const resultSL = await superLightClient.sync();
   console.timeEnd('SuperLightClient Sync Time');
@@ -40,7 +44,11 @@ async function main() {
     )}] as honest provers \n`,
   );
 
-  const lightClient = new LightClient(beaconStoreVerifer, allProvers, batchSize);
+  const lightClient = new LightClient(
+    beaconStoreVerifer,
+    allProvers,
+    batchSize,
+  );
 
   console.time('LightClient Sync Time');
   const resultL = await lightClient.sync();

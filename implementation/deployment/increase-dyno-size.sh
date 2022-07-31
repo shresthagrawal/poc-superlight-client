@@ -2,11 +2,11 @@
 random="chocolate"
 
 # set honest config
-heroku config:set --app "$random-honest-node-1" HONEST=true DUMMY=false 
+heroku ps:type standard-2x --app "$random-honest-node-1" 
 
 # set dishonest config
-for index in {1..13}
+for index in {1..7}
 do
     name="$random-dishonest-node-$index"
-    heroku config:set --app "$name" HONEST=false DUMMY=false 
+    heroku ps:type standard-2x --app "$name" 
 done

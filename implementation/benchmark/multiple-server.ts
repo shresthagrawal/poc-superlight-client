@@ -14,17 +14,27 @@ import { shuffle } from '../src/utils';
 // This config should match the prover config
 const proverCount = 8;
 const isDummy = true;
-const size = 128;
+const size = 1024;
 const committeeSize = 512;
-const trials = 10;
+const trials = 2;
+const treeDegree = 2;
+const batchSize = 1;
+const herokuAppRandomID = 'chocolate';
 
-const benchmarkOutput = `../../results/${isDummy ? 'dummy' : 'beacon'}-data-${proverCount}-${committeeSize}-${size}.json`;
+const benchmarkOutput = `../../results/${
+  isDummy ? 'dummy' : 'beacon'
+}-data-${proverCount}-${committeeSize}-${size}-${treeDegree}-${batchSize}.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);
 
-const HonestProverUrl = 'https://honest-node-1.herokuapp.com';
-const DishonestProverUrls = Array(13).fill(null).map((_, i) => `https://dishonest-node-${i + 1}.herokuapp.com`);
+const HonestProverUrl = `https://${herokuAppRandomID}-honest-node-1.herokuapp.com`;
+const DishonestProverUrls = Array(13)
+  .fill(null)
+  .map(
+    (_, i) =>
+      `https://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
+  );
 
 async function benchmark(trial: number) {
   const result = [];
@@ -34,7 +44,9 @@ async function benchmark(trial: number) {
   const dishonestUrls = shuffle(DishonestProverUrls).slice(0, proverCount - 1);
   const proverUrls = shuffle([HonestProverUrl, ...dishonestUrls]);
 
-  const verifier = isDummy ? new DummyStoreVerifier(size, committeeSize) : new BeaconStoreVerifier();
+  const verifier = isDummy
+    ? new DummyStoreVerifier(size, committeeSize)
+    : new BeaconStoreVerifier();
 
   // Superlight Client
   const benchmarkSL = new Benchmark();
@@ -44,6 +56,7 @@ async function benchmark(trial: number) {
   const superLightClient = new SuperlightClient(
     verifier,
     beaconProversSL,
+    treeDegree,
   );
 
   benchmarkSL.startBenchmark();
@@ -62,7 +75,8 @@ async function benchmark(trial: number) {
     proverCount: proverUrls.length,
     isDummy,
     chainSize: size,
-    committeeSize
+    committeeSize,
+    treeDegree,
   });
 
   // Light Client
@@ -70,7 +84,7 @@ async function benchmark(trial: number) {
   const beaconProversL = proverUrls.map(
     url => new ProverClient(verifier, url, benchmarkL),
   );
-  const lightClient = new LightClient(verifier, beaconProversL);
+  const lightClient = new LightClient(verifier, beaconProversL, batchSize);
 
   benchmarkL.startBenchmark();
   const resultL = await lightClient.sync();
@@ -88,26 +102,34 @@ async function benchmark(trial: number) {
     proverCount: proverUrls.length,
     isDummy,
     chainSize: size,
-    committeeSize
+    committeeSize,
+    batchSize,
   });
   return result;
 }
 
-
 async function main() {
-  const workerPromises = Array(trials).fill(null).map((_, i) => new Promise<void>((resolve, reject)=> {
-    const worker = new Worker(__filename, {workerData: i});
-    worker.on('message', (data) => {
-      benchmarks.push(...data);
-      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
-      return resolve(); 
-    });
-    worker.on('error', reject);
-    worker.on('exit', (code) => {
-       if (code !== 0)
-          reject(new Error(`Worker stopped with exit code ${code}`));
-    });
-  }));
+  const workerPromises = Array(trials)
+    .fill(null)
+    .map(
+      (_, i) =>
+        new Promise<void>((resolve, reject) => {
+          const worker = new Worker(__filename, { workerData: i });
+          worker.on('message', data => {
+            benchmarks.push(...data);
+            fs.writeFileSync(
+              absBenchmarkOutput,
+              JSON.stringify(benchmarks, null, 2),
+            );
+            return resolve();
+          });
+          worker.on('error', reject);
+          worker.on('exit', code => {
+            if (code !== 0)
+              reject(new Error(`Worker stopped with exit code ${code}`));
+          });
+        }),
+    );
   await Promise.all(workerPromises);
 }
 
@@ -117,7 +139,7 @@ async function worker() {
   parentPort!.postMessage(result);
 }
 
-if(isMainThread) {
+if (isMainThread) {
   main().catch(err => console.error(err));
 } else {
   worker().catch(err => console.error(err));
