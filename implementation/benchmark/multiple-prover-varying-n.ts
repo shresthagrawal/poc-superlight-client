@@ -16,8 +16,8 @@ const size = 365 * 10;
 const committeeSize = 512;
 const trial = 1;
 const herokuAppRandomID = 'chocolate';
-const treeDegrees = [2, 3, 5, 10, 50, 100, 500, 1000, 3650];
-const batchSizes = [1, 2, 5, 10, 25, 50];
+const treeDegrees = [2, 3, 5, 10, 50, 75, 100, 200, 300, 400, 500, 750, 1000, 3650];
+const batchSizes = [1, 2, 5, 10, 25, 50, 100, 250, 500];
 
 
 const benchmarkOutput = `../../results/dummy-data-varying-n.json`;

@@ -4,7 +4,7 @@ import { IProver } from './iprover';
 import { Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
 import { Benchmark } from '../benchmark';
-import { wait } from '../utils';
+import { wait, handleHTTPRequest } from '../utils';
 import {
   LeafWithProofSSZ,
   MMRInfoSSZ,
@@ -26,14 +26,9 @@ export class ProverClient<T> implements IProver<T> {
     retry: number = 5,
   ): Promise<any> {
     try {
-      const res = await axios({
-        method,
-        url,
-        responseType: isBuffer ? 'arraybuffer' : undefined,
-      });
-
-      this.benchmark.increment(parseInt(res.headers['content-length']));
-      return res.data;
+      const { data, bytesRead, bytesWritten } = await handleHTTPRequest(method, url, isBuffer);
+      this.benchmark.increment(bytesRead + bytesWritten);
+      return data;
     } catch (e) {
       console.error(`Error while fetching, retry left ${retry}`, e);
       if (retry > 0) {

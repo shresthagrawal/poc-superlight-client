@@ -1,3 +1,6 @@
+import * as http from 'http';
+import * as net from 'net';
+
 import Decimal from 'decimal.js';
 import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
@@ -90,5 +93,45 @@ export function shuffle(array: any[]) {
 export async function wait(ms: number) {
   return new Promise((resolve, reject) => {
     setTimeout(resolve, ms);
+  });
+}
+
+
+export type RequestResult = {
+  bytesRead: number;
+  bytesWritten: number;
+  data: object | Buffer;
+}
+
+export async function handleHTTPRequest(
+  method: 'GET' | 'POST',
+  url: string,
+  isBuffer: boolean = false,
+): Promise<RequestResult> {
+  return new Promise((resolve, reject) => {
+    const data: any[] = [];
+    const option = {
+      method,
+    };
+
+    let socket: net.Socket;
+
+    const req = http.request(url, option, resp => {
+      resp.on('data', chunk => data.push(chunk));
+      resp.on('end', () => {
+        resolve({
+          data: isBuffer
+            ? Buffer.concat(data)
+            : JSON.parse(Buffer.concat(data).toString()),
+          bytesRead: socket.bytesRead,
+          bytesWritten: socket.bytesWritten,
+        });
+      });
+    });
+
+    req.on('socket', _socket => (socket = _socket));
+    req.on('error', err => reject(err));
+
+    req.end();
   });
 }
