@@ -4,7 +4,7 @@ import { IProver } from './iprover';
 import { Peaks } from '../merkle-mountain-range';
 import { ISyncStoreVerifer } from '../store/isync-store';
 import { Benchmark } from '../benchmark';
-import { wait, handleHTTPRequest } from '../utils';
+import { wait, handleHTTPSRequest } from '../utils';
 import {
   LeafWithProofSSZ,
   MMRInfoSSZ,
@@ -26,7 +26,7 @@ export class ProverClient<T> implements IProver<T> {
     retry: number = 5,
   ): Promise<any> {
     try {
-      const { data, bytesRead, bytesWritten } = await handleHTTPRequest(method, url, isBuffer);
+      const { data, bytesRead, bytesWritten } = await handleHTTPSRequest(method, url, isBuffer);
       this.benchmark.increment(bytesRead + bytesWritten);
       return data;
     } catch (e) {

@@ -1,4 +1,4 @@
-import * as http from 'http';
+import * as https from 'https';
 import * as net from 'net';
 
 import Decimal from 'decimal.js';
@@ -103,7 +103,7 @@ export type RequestResult = {
   data: object | Buffer;
 }
 
-export async function handleHTTPRequest(
+export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
   url: string,
   isBuffer: boolean = false,
@@ -116,7 +116,7 @@ export async function handleHTTPRequest(
 
     let socket: net.Socket;
 
-    const req = http.request(url, option, resp => {
+    const req = https.request(url, option, resp => {
       resp.on('data', chunk => data.push(chunk));
       resp.on('end', () => {
         resolve({
