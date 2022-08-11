@@ -9,6 +9,9 @@ export interface ISyncStoreProver<T> {
   getSyncUpdate(period: number): T;
 
   updatesToBytes(update: T[], maxItems: number): Uint8Array;
+
+  // optional function to update chain size
+  updateChainSize?(chainSize: number): void;
 }
 
 export interface ISyncStoreVerifer<T> {

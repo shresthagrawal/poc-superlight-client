@@ -17,16 +17,9 @@ import {
 } from '@chainsafe/ssz';
 
 type Committee = Uint8Array[];
-type CommitteeOptimised = ArrayBufferLike[];
 
 type DummyHeader = {
   nextCommittee: Committee;
-  epoch: number;
-};
-
-// The optimised data structures uses less memory
-type DummyHeaderOptimised = {
-  nextCommittee: CommitteeOptimised;
   epoch: number;
 };
 
@@ -35,10 +28,18 @@ type DummyUpdate = {
   aggregateSignature: Uint8Array;
 };
 
-// The optimised data structures uses less memory
-type DummyUpdateOptimised = {
-  header: DummyHeaderOptimised;
+type DummyUpdateRaw = {
+  header: {
+    nextCommittee: ArrayBufferLike[];
+    epoch: number;
+  };
   aggregateSignature: ArrayBufferLike;
+};
+
+type CommitteeChainInfo = {
+  syncUpdatesRaw: Uint8Array[];
+  genesisCommittee: Uint8Array[];
+  syncCommitteeHashes: Uint8Array[];
 };
 
 function hashHeader(header: DummyHeader): Uint8Array {
@@ -50,17 +51,7 @@ function hashHeader(header: DummyHeader): Uint8Array {
   );
 }
 
-function toOptimisedUpdate(update: DummyUpdate): DummyUpdateOptimised {
-  return {
-    header: {
-      epoch: update.header.epoch,
-      nextCommittee: update.header.nextCommittee.map(u => u.buffer),
-    },
-    aggregateSignature: update.aggregateSignature.buffer,
-  };
-}
-
-function fromOptimisedUpdate(update: DummyUpdateOptimised): DummyUpdate {
+function fromRawUpdate(update: DummyUpdateRaw): DummyUpdate {
   return {
     header: {
       epoch: update.header.epoch,
@@ -84,72 +75,119 @@ function getUpdateSSZ(committeeSize: number) {
 }
 
 export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
-  startPeriod: number;
-  syncUpdatesOptimised: DummyUpdateOptimised[];
-  syncCommitteeHashes: Uint8Array[];
-  genesisCommittee: Uint8Array[];
+  startPeriod: number = 0;
+  honestCommitteeChain: CommitteeChainInfo;
+  dishonestCommitteeChain: CommitteeChainInfo | null = null; // set to null if the prover is honest
+  dishonestyIndex: number = -1; // default set to -1 which implies honest prover
   updateSSZ: ContainerType<any>;
 
   constructor(
-    honest: boolean = true,
-    size: number = 100,
+    protected honest: boolean = true,
+    protected maxChainSize: number = 100,
     committeeSize: number = 10,
     seed: string = 'seedme',
   ) {
     this.updateSSZ = getUpdateSSZ(committeeSize);
 
+    this.honestCommitteeChain = this.getCommitteeChain(
+      seed,
+      maxChainSize,
+      committeeSize,
+      this.updateSSZ,
+    );
+    if (!honest) {
+      this.dishonestCommitteeChain = this.getCommitteeChain(
+        seed + 'dishonest',
+        maxChainSize,
+        committeeSize,
+        this.updateSSZ,
+      );
+      this.dishonestyIndex = getRandomInt(maxChainSize);
+      console.log(`Dishonesty index ${this.dishonestyIndex}`);
+    }
+  }
+
+  private getCommitteeChain(
+    seed: string,
+    maxChainSize: number,
+    committeeSize: number,
+    ssz: ContainerType<any>,
+  ): {
+    syncUpdatesRaw: Uint8Array[];
+    genesisCommittee: Uint8Array[];
+    syncCommitteeHashes: Uint8Array[];
+  } {
     // generate committee using seed
     const randomBytesGenerator = new RandomBytesGenerator(seed);
-
-    const nextCommitteePK = (isMalicious: boolean = false) =>
-      isMalicious
-        ? new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen())
-        : randomBytesGenerator
-            .generateArray(32, committeeSize)
-            .map(entropy => SecretKey.fromKeygen(entropy));
+    const nextCommitteePK = () =>
+      randomBytesGenerator
+        .generateArray(32, committeeSize)
+        .map(entropy => SecretKey.fromKeygen(entropy));
     const getCommitteeFromPK = (cPK: SecretKey[]) =>
       cPK.map(pk => pk.toPublicKey().toBytes());
     const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
 
     let currentCommitteePK = nextCommitteePK();
-    this.genesisCommittee = getCommitteeFromPK(currentCommitteePK);
-    this.syncCommitteeHashes = [getCommitteeHash(this.genesisCommittee)];
+    const genesisCommittee = getCommitteeFromPK(currentCommitteePK);
+    const syncCommitteeHashes = [getCommitteeHash(genesisCommittee)];
 
-    // index staring which the store will be dishonest
-    const dishonestyIndex = honest ? size : getRandomInt(size);
-    if (!honest) console.log(`Dishonesty index ${dishonestyIndex}`);
-
-    // generate dummy sync updates
-    this.syncUpdatesOptimised = new Array(size).fill(null).map((_, i) => {
-      console.log(`Creating syncUpdates for period ${i}`);
-      const nextSyncCommitteePK = nextCommitteePK(i >= dishonestyIndex);
+    const syncUpdatesRaw = new Array(maxChainSize).fill(null).map((_, i) => {
+      console.log(`(${seed}) Creating syncUpdates for period ${i}`);
+      const nextSyncCommitteePK = nextCommitteePK();
       const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
-      this.syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
+      syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
 
       const header = {
-        nextCommittee: nextCommittee,
+        nextCommittee,
         epoch: i,
       };
 
-      let aggregateSignature: Uint8Array;
-      if (i === dishonestyIndex) {
-        aggregateSignature = new Uint8Array(96);
-      } else {
-        // generate correct signature for honest updates
-        const headerHash = hashHeader(header);
-        const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
-        aggregateSignature = Signature.aggregate(signatures).toBytes();
-      }
+      // generate correct signature for honest updates
+      const headerHash = hashHeader(header);
+      const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
+      const aggregateSignature = Signature.aggregate(signatures).toBytes();
 
       currentCommitteePK = nextSyncCommitteePK;
       const update = {
         header,
         aggregateSignature,
       };
-      return toOptimisedUpdate(update);
+      return ssz.serialize(update);
     });
 
-    this.startPeriod = 0;
+    return {
+      syncUpdatesRaw,
+      genesisCommittee,
+      syncCommitteeHashes,
+    };
+  }
+
+  private get syncCommitteeHashes() {
+    return this.dishonestCommitteeChain
+      ? [
+          ...this.honestCommitteeChain.syncCommitteeHashes.slice(
+            0,
+            this.dishonestyIndex,
+          ),
+          ...this.dishonestCommitteeChain.syncCommitteeHashes.slice(
+            this.dishonestyIndex,
+          ),
+        ]
+      : this.honestCommitteeChain.syncCommitteeHashes;
+  }
+
+  private get genesisCommittee() {
+    return this.dishonestCommitteeChain && this.dishonestyIndex === 0
+      ? this.dishonestCommitteeChain.genesisCommittee
+      : this.honestCommitteeChain.genesisCommittee;
+  }
+
+  getSyncUpdate(period: number): DummyUpdate {
+    const rawUpdate =
+      this.dishonestCommitteeChain && this.dishonestyIndex <= period
+        ? this.dishonestCommitteeChain.syncUpdatesRaw[period]
+        : this.honestCommitteeChain.syncUpdatesRaw[period];
+    return fromRawUpdate(this.updateSSZ.deserialize(rawUpdate) as DummyUpdateRaw);
   }
 
   getAllSyncCommitteeHashes(): {
@@ -164,17 +202,18 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
 
   getSyncCommittee(period: number): Uint8Array[] {
     if (period === 0) return this.genesisCommittee;
-    return this.syncUpdatesOptimised[period - 1].header.nextCommittee.map(
-      b => new Uint8Array(b),
-    );
-  }
-
-  getSyncUpdate(period: number): DummyUpdate {
-    return fromOptimisedUpdate(this.syncUpdatesOptimised[period]);
+    return this.getSyncUpdate(period - 1).header.nextCommittee;
   }
 
   updatesToBytes(update: DummyUpdate[], maxItems: number): Uint8Array {
     return new ListCompositeType(this.updateSSZ, maxItems).serialize(update);
+  }
+
+  updateChainSize(chainSize: number) {
+    if(!this.dishonestCommitteeChain)
+      return;
+    this.dishonestyIndex = getRandomInt(chainSize);
+    console.log(`Dishonesty index updated ${this.dishonestyIndex}`);
   }
 }
 
@@ -261,7 +300,7 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
     const updatesBuffer = new ListCompositeType(
       this.updateSSZ,
       maxItems,
-    ).deserialize(bytesUpdates) as DummyUpdateOptimised[];
-    return updatesBuffer.map(u => fromOptimisedUpdate(u));
+    ).deserialize(bytesUpdates) as DummyUpdateRaw[];
+    return updatesBuffer.map(u => fromRawUpdate(u));
   }
 }

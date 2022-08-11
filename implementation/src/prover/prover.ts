@@ -21,12 +21,12 @@ export class Prover<T> implements IProver<T> {
   }
 
   setConfig(chainSize: number, treeDegree: number) {
-    if (this.treeDegree === treeDegree && this.chainSize === chainSize) return;
-
     this.treeDegree = treeDegree;
     this.chainSize = chainSize;
     this.mmr = new MerkleMountainRange(digest, treeDegree);
     this.mmr.init(this.leaves.slice(0, chainSize + 1));
+    if(this.store.updateChainSize)
+      this.store.updateChainSize(chainSize);
   }
 
   get latestPeriod() {
