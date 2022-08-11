@@ -12,12 +12,12 @@ import { shuffle } from '../src/utils';
 
 // This config should match the prover config
 const proverCount = 8;
-const size = 365 * 10;
 const committeeSize = 512;
 const trial = 1;
 const herokuAppRandomID = 'chocolate';
 const treeDegrees = [2, 3, 5, 10, 50, 75, 100, 200, 300, 400, 500, 750, 1000, 3650];
 const batchSizes = [1, 2, 5, 10, 25, 50, 100, 250, 500];
+const chainSizes = [4, 6, 8, 10].map(c => c * 365);
 
 
 const benchmarkOutput = `../../results/dummy-data-varying-n.json`;
@@ -33,15 +33,15 @@ const DishonestProverUrls = Array(7)
       `https://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
   );
 
-async function benchmarkSuperlight(treeDegree: number) {
+async function benchmarkSuperlight(chainSize: number, treeDegree: number) {
   const proverUrls = shuffle([HonestProverUrl, ...DishonestProverUrls]);
-  const verifier = new DummyStoreVerifier(size, committeeSize);
+  const verifier = new DummyStoreVerifier(chainSize, committeeSize);
 
   const benchmarkSL = new Benchmark();
   const beaconProversSL = proverUrls.map(
     url => new ProverClient(verifier, url, benchmarkSL),
   );
-  await Promise.all(beaconProversSL.map(p => p.setConfig(size, treeDegree)));
+  await Promise.all(beaconProversSL.map(p => p.setConfig(chainSize, treeDegree)));
  
   const superLightClient = new SuperlightClient(
     verifier,
@@ -58,7 +58,7 @@ async function benchmarkSuperlight(treeDegree: number) {
     ...resultSLBenchmark,
     proverCount,
     isDummy: true,
-    chainSize: size,
+    chainSize,
     committeeSize,
     treeDegree,
     interactivityData: treeDegree * 32, // this is approzimate!!
@@ -67,14 +67,16 @@ async function benchmarkSuperlight(treeDegree: number) {
   return result;
 }
 
-async function benchmarkLight(batchSize: number) {
+async function benchmarkLight(chainSize: number, batchSize: number) {
   const proverUrls = shuffle([HonestProverUrl, ...DishonestProverUrls]);
-  const verifier = new DummyStoreVerifier(size, committeeSize);
+  const verifier = new DummyStoreVerifier(chainSize, committeeSize);
 
   const benchmarkL = new Benchmark();
   const beaconProversL = proverUrls.map(
     url => new ProverClient(verifier, url, benchmarkL),
   );
+  await Promise.all(beaconProversL.map(p => p.setConfig(chainSize, 2)));
+
   const lightClient = new LightClient(verifier, beaconProversL, batchSize);
 
   benchmarkL.startBenchmark();
@@ -87,7 +89,7 @@ async function benchmarkLight(batchSize: number) {
     ...resultLBenchmark,
     proverCount: proverUrls.length,
     isDummy: true,
-    chainSize: size,
+    chainSize,
     committeeSize,
     batchSize,
     interactivityData: batchSize * 24680, // this is approzimate!!
@@ -98,22 +100,31 @@ async function benchmarkLight(batchSize: number) {
 
 async function main() {
   await init('blst-native');
-  for (let treeDegree of treeDegrees) {
-    const result = await benchmarkSuperlight(treeDegree);
-    benchmarks.push(result);
-    fs.writeFileSync(
-      absBenchmarkOutput,
-      JSON.stringify(benchmarks, null, 2),
-    );
+
+  for(let chainSize of chainSizes) {
+    for (let treeDegree of treeDegrees) {
+      if(treeDegree > chainSize)
+        continue;
+      const result = await benchmarkSuperlight(chainSize, treeDegree);
+      benchmarks.push(result);
+      fs.writeFileSync(
+        absBenchmarkOutput,
+        JSON.stringify(benchmarks, null, 2),
+      );
+    }
   }
 
-  for (let batchSize of batchSizes) {
-    const result = await benchmarkLight(batchSize);
-    benchmarks.push(result);
-    fs.writeFileSync(
-      absBenchmarkOutput,
-      JSON.stringify(benchmarks, null, 2),
-    );
+  for(let chainSize of chainSizes) {
+    for (let batchSize of batchSizes) {
+      if(batchSize > chainSize)
+        continue;
+      const result = await benchmarkLight(chainSize, batchSize);
+      benchmarks.push(result);
+      fs.writeFileSync(
+        absBenchmarkOutput,
+        JSON.stringify(benchmarks, null, 2),
+      );
+    }
   }
 }
 
