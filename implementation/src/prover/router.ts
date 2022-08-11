@@ -103,15 +103,20 @@ export default async function getApp() {
     res.end(updatesBytes);
   });
 
-  app.post('/tree-degree', function (req, res) {
+  app.post('/config', function (req, res) {
     if (!ps.initCompleted)
       return res.status(400).json({ error: 'Prover not initialised' });
     const prover = ps.getProver();
     const store = ps.getStore();
-    if (!req.query.n)
-      return res.status(400).json({ error: 'tree-degree (n) not specified' });
-    const n = parseInt(req.query.n as string);
-    prover.setN(n);
+    if (!req.query.treeDegree || !req.query.chainSize)
+      return res.status(400).json({ error: 'treeDegree or chainSize not specified' });
+    const _treeDegree = parseInt(req.query.treeDegree as string);
+    const _chainSize = parseInt(req.query.chainSize as string);
+
+    if (_treeDegree > _chainSize || _chainSize > chainSize)
+      return res.status(400).json({ error: 'invalid treeDegree or chainSize' });
+
+    prover.setConfig(_chainSize, _treeDegree);
 
     return res.json({
       success: true,

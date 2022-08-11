@@ -27,7 +27,7 @@ export class ProverClient<T> implements IProver<T> {
   ): Promise<any> {
     try {
       const { data, bytesRead, bytesWritten } = await handleHTTPSRequest(method, url, isBuffer);
-      this.benchmark.increment(bytesRead + bytesWritten);
+      this.benchmark.increment(bytesRead, bytesWritten);
       return data;
     } catch (e) {
       console.error(`Error while fetching, retry left ${retry}`, e);
@@ -101,8 +101,8 @@ export class ProverClient<T> implements IProver<T> {
     return this.store.updatesFromBytes(data, maxCount);
   }
 
-  async setN(n: number) {
-    const data = await this.postRequest(`${this.serverUrl}/tree-degree?n=${n}`);
+  async setConfig(chainSize: number, treeDegree: number) {
+    const data = await this.postRequest(`${this.serverUrl}/config?treeDegree=${treeDegree}&chainSize=${chainSize}`);
     if (!data.success) throw new Error('set tree-degree failed');
   }
 }

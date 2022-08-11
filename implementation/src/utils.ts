@@ -1,4 +1,6 @@
 import * as https from 'https';
+import * as http from 'http';
+import { URL } from 'url';
 import * as net from 'net';
 
 import Decimal from 'decimal.js';
@@ -116,7 +118,8 @@ export async function handleHTTPSRequest(
 
     let socket: net.Socket;
 
-    const req = https.request(url, option, resp => {
+    const _url = new URL(url);
+    const req = (_url.protocol === 'http:' ? http : https).request(url, option, resp => {
       resp.on('data', chunk => data.push(chunk));
       resp.on('end', () => {
         resolve({

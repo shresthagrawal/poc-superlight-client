@@ -41,7 +41,7 @@ async function benchmarkSuperlight(treeDegree: number) {
   const beaconProversSL = proverUrls.map(
     url => new ProverClient(verifier, url, benchmarkSL),
   );
-  await Promise.all(beaconProversSL.map(p => p.setN(treeDegree)));
+  await Promise.all(beaconProversSL.map(p => p.setConfig(size, treeDegree)));
  
   const superLightClient = new SuperlightClient(
     verifier,
