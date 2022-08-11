@@ -97,7 +97,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     );
     if (!honest) {
       this.dishonestCommitteeChain = this.getCommitteeChain(
-        seed + 'dishonest',
+        false,
         maxChainSize,
         committeeSize,
         this.updateSSZ,
@@ -108,7 +108,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   }
 
   private getCommitteeChain(
-    seed: string,
+    seed: string | false,
     maxChainSize: number,
     committeeSize: number,
     ssz: ContainerType<any>,
@@ -118,11 +118,13 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     syncCommitteeHashes: Uint8Array[];
   } {
     // generate committee using seed
-    const randomBytesGenerator = new RandomBytesGenerator(seed);
+    const randomBytesGenerator = new RandomBytesGenerator(seed || '');
     const nextCommitteePK = () =>
-      randomBytesGenerator
+      seed
+      ? randomBytesGenerator
         .generateArray(32, committeeSize)
-        .map(entropy => SecretKey.fromKeygen(entropy));
+        .map(entropy => SecretKey.fromKeygen(entropy))
+      : new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen());
     const getCommitteeFromPK = (cPK: SecretKey[]) =>
       cPK.map(pk => pk.toPublicKey().toBytes());
     const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
@@ -132,7 +134,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
     const syncCommitteeHashes = [getCommitteeHash(genesisCommittee)];
 
     const syncUpdatesRaw = new Array(maxChainSize).fill(null).map((_, i) => {
-      console.log(`(${seed}) Creating syncUpdates for period ${i}`);
+      console.log(`(${seed ? 'honest' : 'dishonest'}) Creating syncUpdates for period ${i}`);
       const nextSyncCommitteePK = nextCommitteePK();
       const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
       syncCommitteeHashes.push(getCommitteeHash(nextCommittee));
