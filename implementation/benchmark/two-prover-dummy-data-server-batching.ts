@@ -32,7 +32,7 @@ async function main() {
   const lightClientResults = [];
   const superlightClientResults = [];
 
-  for(let chainSize of chainSizes) {
+  for (let chainSize of chainSizes) {
     const dummyStoreVerifier = new DummyStoreVerifier(chainSize, committeeSize);
 
     const benchmarkSL = new Benchmark();
@@ -47,8 +47,7 @@ async function main() {
 
     for (let _n of n) {
       // only benchmark of the _n is less than equal to chainSize
-      if(_n > chainSize)
-        continue;
+      if (_n > chainSize) continue;
 
       // Superlight Client
       await Promise.all(beaconProversSL.map(p => p.setConfig(chainSize, _n)));
@@ -69,11 +68,15 @@ async function main() {
       superlightClientResults.push({
         ...resultSLBenchmark,
         chainSize,
-        treeDegree: _n
+        treeDegree: _n,
       });
 
       // Light Client
-      const lightClient = new LightClient(dummyStoreVerifier, beaconProversL, _n);
+      const lightClient = new LightClient(
+        dummyStoreVerifier,
+        beaconProversL,
+        _n,
+      );
 
       benchmarkL.startBenchmark();
       const resultL = await lightClient.sync();
@@ -84,17 +87,13 @@ async function main() {
       lightClientResults.push({
         ...resultLBenchmark,
         chainSize,
-        batchSize: _n
+        batchSize: _n,
       });
     }
   }
 
-  console.log(
-    `ChainSize: ${superlightClientResults.map(r => r.chainSize)}`,
-  );
-  console.log(
-    `n: ${superlightClientResults.map(r => r.treeDegree)}\n`,
-  );
+  console.log(`ChainSize: ${superlightClientResults.map(r => r.chainSize)}`);
+  console.log(`n: ${superlightClientResults.map(r => r.treeDegree)}\n`);
 
   console.log('Superlight Client');
   console.log(

@@ -21,9 +21,8 @@ export class Prover<T> implements IProver<T> {
   setConfig(chainSize: number, treeDegree: number) {
     this.treeDegree = treeDegree;
     this.chainSize = chainSize;
-  
-    if(this.store.updateChainSize)
-      this.store.updateChainSize(chainSize);
+
+    if (this.store.updateChainSize) this.store.updateChainSize(chainSize);
 
     this.mmr = new MerkleMountainRange(digest, treeDegree);
     const { hashes } = this.store.getAllSyncCommitteeHashes();

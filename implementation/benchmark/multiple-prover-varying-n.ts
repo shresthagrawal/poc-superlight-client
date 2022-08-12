@@ -15,10 +15,11 @@ const proverCount = 8;
 const committeeSize = 512;
 const trial = 1;
 const herokuAppRandomID = 'chocolate';
-const treeDegrees = [2, 3, 5, 10, 50, 75, 100, 200, 300, 400, 500, 750, 1000, 3650];
+const treeDegrees = [
+  2, 3, 5, 10, 50, 75, 100, 200, 300, 400, 500, 750, 1000, 3650,
+];
 const batchSizes = [1, 2, 5, 10, 25, 50, 100, 250, 500];
 const chainSizes = [4, 6, 8, 10].map(c => c * 365);
-
 
 const benchmarkOutput = `../../results/dummy-data-varying-n.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
@@ -41,8 +42,10 @@ async function benchmarkSuperlight(chainSize: number, treeDegree: number) {
   const beaconProversSL = proverUrls.map(
     url => new ProverClient(verifier, url, benchmarkSL),
   );
-  await Promise.all(beaconProversSL.map(p => p.setConfig(chainSize, treeDegree)));
- 
+  await Promise.all(
+    beaconProversSL.map(p => p.setConfig(chainSize, treeDegree)),
+  );
+
   const superLightClient = new SuperlightClient(
     verifier,
     beaconProversSL,
@@ -82,7 +85,7 @@ async function benchmarkLight(chainSize: number, batchSize: number) {
   benchmarkL.startBenchmark();
   const resultL = await lightClient.sync();
   const resultLBenchmark = benchmarkL.stopBenchmark();
-  
+
   const result = {
     type: 'light',
     trial,
@@ -101,29 +104,21 @@ async function benchmarkLight(chainSize: number, batchSize: number) {
 async function main() {
   await init('blst-native');
 
-  for(let chainSize of chainSizes) {
+  for (let chainSize of chainSizes) {
     for (let treeDegree of treeDegrees) {
-      if(treeDegree > chainSize)
-        continue;
+      if (treeDegree > chainSize) continue;
       const result = await benchmarkSuperlight(chainSize, treeDegree);
       benchmarks.push(result);
-      fs.writeFileSync(
-        absBenchmarkOutput,
-        JSON.stringify(benchmarks, null, 2),
-      );
+      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
     }
   }
 
-  for(let chainSize of chainSizes) {
+  for (let chainSize of chainSizes) {
     for (let batchSize of batchSizes) {
-      if(batchSize > chainSize)
-        continue;
+      if (batchSize > chainSize) continue;
       const result = await benchmarkLight(chainSize, batchSize);
       benchmarks.push(result);
-      fs.writeFileSync(
-        absBenchmarkOutput,
-        JSON.stringify(benchmarks, null, 2),
-      );
+      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
     }
   }
 }

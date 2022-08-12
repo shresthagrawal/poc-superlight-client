@@ -1,23 +1,9 @@
-import {
-  ContainerType,
-  ListCompositeType
-} from '@chainsafe/ssz';
+import { ContainerType, ListCompositeType } from '@chainsafe/ssz';
 import { ISyncStoreProver } from '../isync-store';
-import {
-  getRandomInt,
-} from '../../utils';
-import {
-  DummyUpdateRaw,
-  DummyUpdate,
-  CommitteeChainInfo
-} from './types';
-import {
-  fromRawUpdate,
-  generateChain
-} from './utils';
-import {
-  getUpdateSSZ
-} from './ssz';
+import { getRandomInt } from '../../utils';
+import { DummyUpdateRaw, DummyUpdate, CommitteeChainInfo } from './types';
+import { fromRawUpdate, generateChain } from './utils';
+import { getUpdateSSZ } from './ssz';
 
 export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   startPeriod: number = 0;
@@ -77,7 +63,9 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
       this.dishonestCommitteeChain && this.dishonestyIndex <= period
         ? this.dishonestCommitteeChain.syncUpdatesRaw[period]
         : this.honestCommitteeChain.syncUpdatesRaw[period];
-    return fromRawUpdate(this.updateSSZ.deserialize(rawUpdate) as DummyUpdateRaw);
+    return fromRawUpdate(
+      this.updateSSZ.deserialize(rawUpdate) as DummyUpdateRaw,
+    );
   }
 
   getAllSyncCommitteeHashes(): {
@@ -100,8 +88,7 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   }
 
   updateChainSize(chainSize: number) {
-    if(!this.dishonestCommitteeChain)
-      return;
+    if (!this.dishonestCommitteeChain) return;
     this.dishonestyIndex = getRandomInt(chainSize);
     console.log(`Dishonesty index updated ${this.dishonestyIndex}`);
   }

@@ -109,7 +109,9 @@ export default async function getApp() {
     const prover = ps.getProver();
     const store = ps.getStore();
     if (!req.query.treeDegree || !req.query.chainSize)
-      return res.status(400).json({ error: 'treeDegree or chainSize not specified' });
+      return res
+        .status(400)
+        .json({ error: 'treeDegree or chainSize not specified' });
     const _treeDegree = parseInt(req.query.treeDegree as string);
     const _chainSize = parseInt(req.query.chainSize as string);
 

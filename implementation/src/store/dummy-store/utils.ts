@@ -1,13 +1,11 @@
 import { digest } from '@chainsafe/as-sha256';
 import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
-import {
-  ContainerType,
-} from '@chainsafe/ssz';
+import { ContainerType } from '@chainsafe/ssz';
 import {
   DummyHeader,
   DummyUpdate,
   DummyUpdateRaw,
-  CommitteeChainInfo
+  CommitteeChainInfo,
 } from './types';
 import {
   RandomBytesGenerator,
@@ -41,15 +39,15 @@ export function generateChain(
   maxChainSize: number,
   committeeSize: number,
   ssz: ContainerType<any>,
-): CommitteeChainInfo  {
+): CommitteeChainInfo {
   // generate committee using seed
   const randomBytesGenerator = new RandomBytesGenerator(seed || '');
   const nextCommitteePK = () =>
     seed
-    ? randomBytesGenerator
-      .generateArray(32, committeeSize)
-      .map(entropy => SecretKey.fromKeygen(entropy))
-    : new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen());
+      ? randomBytesGenerator
+          .generateArray(32, committeeSize)
+          .map(entropy => SecretKey.fromKeygen(entropy))
+      : new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen());
   const getCommitteeFromPK = (cPK: SecretKey[]) =>
     cPK.map(pk => pk.toPublicKey().toBytes());
   const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
@@ -59,7 +57,9 @@ export function generateChain(
   const syncCommitteeHashes = [getCommitteeHash(genesisCommittee)];
 
   const syncUpdatesRaw = new Array(maxChainSize).fill(null).map((_, i) => {
-    console.log(`(${seed ? 'honest' : 'dishonest'}) Creating syncUpdates for period ${i}`);
+    console.log(
+      `(${seed ? 'honest' : 'dishonest'}) Creating syncUpdates for period ${i}`,
+    );
     const nextSyncCommitteePK = nextCommitteePK();
     const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
     syncCommitteeHashes.push(getCommitteeHash(nextCommittee));

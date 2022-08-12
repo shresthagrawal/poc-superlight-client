@@ -1,24 +1,10 @@
-import {
-  ContainerType,
-  ListCompositeType
-} from '@chainsafe/ssz';
+import { ContainerType, ListCompositeType } from '@chainsafe/ssz';
 import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
 import { ISyncStoreVerifer } from '../isync-store';
-import {
-  RandomBytesGenerator,
-  isUint8ArrayEq
-} from '../../utils';
-import {
-  DummyUpdateRaw,
-  DummyUpdate
-} from './types';
-import {
-  hashHeader,
-  fromRawUpdate
-} from './utils';
-import {
-  getUpdateSSZ
-} from './ssz';
+import { RandomBytesGenerator, isUint8ArrayEq } from '../../utils';
+import { DummyUpdateRaw, DummyUpdate } from './types';
+import { hashHeader, fromRawUpdate } from './utils';
+import { getUpdateSSZ } from './ssz';
 
 export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
   genesisSyncCommittee: Uint8Array[];

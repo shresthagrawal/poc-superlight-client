@@ -98,12 +98,11 @@ export async function wait(ms: number) {
   });
 }
 
-
 export type RequestResult = {
   bytesRead: number;
   bytesWritten: number;
   data: object | Buffer;
-}
+};
 
 export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
@@ -119,18 +118,22 @@ export async function handleHTTPSRequest(
     let socket: net.Socket;
 
     const _url = new URL(url);
-    const req = (_url.protocol === 'http:' ? http : https).request(url, option, resp => {
-      resp.on('data', chunk => data.push(chunk));
-      resp.on('end', () => {
-        resolve({
-          data: isBuffer
-            ? Buffer.concat(data)
-            : JSON.parse(Buffer.concat(data).toString()),
-          bytesRead: socket.bytesRead,
-          bytesWritten: socket.bytesWritten,
+    const req = (_url.protocol === 'http:' ? http : https).request(
+      url,
+      option,
+      resp => {
+        resp.on('data', chunk => data.push(chunk));
+        resp.on('end', () => {
+          resolve({
+            data: isBuffer
+              ? Buffer.concat(data)
+              : JSON.parse(Buffer.concat(data).toString()),
+            bytesRead: socket.bytesRead,
+            bytesWritten: socket.bytesWritten,
+          });
         });
-      });
-    });
+      },
+    );
 
     req.on('socket', _socket => (socket = _socket));
     req.on('error', err => reject(err));
