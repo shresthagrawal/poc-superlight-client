@@ -8,25 +8,26 @@ export class Prover<T> implements IProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   chainSize: number;
-  leaves: Uint8Array[];
 
   constructor(public store: ISyncStoreProver<T>, protected treeDegree = 2) {
     const { startPeriod, hashes } = store.getAllSyncCommitteeHashes();
     this.startPeriod = startPeriod;
     this.chainSize = hashes.length - 1;
-    this.leaves = hashes;
 
     this.mmr = new MerkleMountainRange(digest, treeDegree);
-    this.mmr.init(this.leaves);
+    this.mmr.init(hashes);
   }
 
   setConfig(chainSize: number, treeDegree: number) {
     this.treeDegree = treeDegree;
     this.chainSize = chainSize;
-    this.mmr = new MerkleMountainRange(digest, treeDegree);
-    this.mmr.init(this.leaves.slice(0, chainSize + 1));
+  
     if(this.store.updateChainSize)
       this.store.updateChainSize(chainSize);
+
+    this.mmr = new MerkleMountainRange(digest, treeDegree);
+    const { hashes } = this.store.getAllSyncCommitteeHashes();
+    this.mmr.init(hashes.slice(0, chainSize + 1));
   }
 
   get latestPeriod() {
