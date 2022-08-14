@@ -10,8 +10,8 @@ import {
 
 // these params can be adjusted
 const MAX_DEPT = 1000;
-const MAX_DEGREE = 10000;
-const MAX_CHAINSIZE = 10000;
+const MAX_DEGREE = 100000;
+const MAX_CHAINSIZE = 100000;
 const MAX_COMMITTEE_SIZE = 1000;
 
 const CommitteeSSZ = new ListCompositeType(
