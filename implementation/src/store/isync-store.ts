@@ -1,4 +1,8 @@
+import { AsyncOrSync } from 'ts-essentials';
+
 export interface ISyncStoreProver<T> {
+  init?(): AsyncOrSync<void>;
+
   getAllSyncCommitteeHashes(): {
     startPeriod: number;
     hashes: Uint8Array[];

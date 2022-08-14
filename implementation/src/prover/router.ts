@@ -1,7 +1,7 @@
 import * as express from 'express';
 import { init } from '@chainsafe/bls';
 import { BeaconStoreProver } from '../store/beacon-store';
-import { DummyStoreProver } from '../store/dummy-store';
+import { DummyStoreProver, DummyStoreFetchProver } from '../store/dummy-store';
 import { ISyncStoreProver } from '../store/isync-store';
 import { Prover } from './prover';
 import { fromHexString } from '@chainsafe/ssz';
@@ -10,9 +10,12 @@ import { LeafWithProofSSZ, MMRInfoSSZ, NodeSSZ } from './ssz-types';
 const isHonest = process.env.HONEST !== 'false';
 const isDummy = process.env.DUMMY === 'true';
 const seed = process.env.seed || 'seedme';
-const chainSize = parseInt(process.env.CHAIN_SIZE || '100');
+const chainSize = parseInt(process.env.CHAIN_SIZE || '365');
 const committeeSize = parseInt(process.env.COMMITTEE_SIZE || '10');
 const treeDegree = parseInt(process.env.treeDegree || '2');
+const honestResourceURL = process.env.HONEST_URL || '';
+const dishonestResourceURL = process.env.DISHONEST_URL || '';
+const fetchChainInfo = process.env.FETCH_CHAIN === 'true';
 
 // This is a hack to make sure the server is setup first and
 // the blocking operation of generating the dummy chain is
@@ -25,10 +28,19 @@ class ProverSetup {
 
   async init() {
     await init('blst-native');
-    setImmediate(() => {
-      this.store = isDummy
+    setImmediate(async () => {
+      this.store = fetchChainInfo
+        ? new DummyStoreFetchProver(
+            { honest: honestResourceURL, dishonest: dishonestResourceURL },
+            isHonest,
+            chainSize,
+            committeeSize,
+            seed,
+          )
+        : isDummy
         ? new DummyStoreProver(isHonest, chainSize, committeeSize, seed)
         : new BeaconStoreProver(isHonest);
+      if (this.store.init) await this.store.init();
       this.prover = new Prover(this.store, treeDegree);
       this.initCompleted = true;
     });

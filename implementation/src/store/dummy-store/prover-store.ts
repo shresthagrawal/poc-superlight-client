@@ -15,25 +15,25 @@ export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   constructor(
     protected honest: boolean = true,
     protected maxChainSize: number = 100,
-    committeeSize: number = 10,
-    seed: string = 'seedme',
+    protected committeeSize: number = 10,
+    protected seed: string = 'seedme',
   ) {
     this.updateSSZ = getUpdateSSZ(committeeSize);
+  }
 
+  init() {
     this.honestCommitteeChain = generateChain(
-      seed,
-      maxChainSize,
-      committeeSize,
-      this.updateSSZ,
+      this.seed + '0',
+      this.maxChainSize,
+      this.committeeSize,
     );
-    if (!honest) {
+    if (!this.honest) {
       this.dishonestCommitteeChain = generateChain(
         false,
-        maxChainSize,
-        committeeSize,
-        this.updateSSZ,
+        this.maxChainSize,
+        this.committeeSize,
       );
-      this.dishonestyIndex = getRandomInt(maxChainSize);
+      this.dishonestyIndex = getRandomInt(this.maxChainSize);
       console.log(`Dishonesty index ${this.dishonestyIndex}`);
     }
   }

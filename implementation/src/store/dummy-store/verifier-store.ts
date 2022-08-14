@@ -19,7 +19,7 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
     this.updateSSZ = getUpdateSSZ(committeeSize);
 
     // generate genesis committee using genesis seed
-    const randomBytesGenerator = new RandomBytesGenerator(genesisSeed);
+    const randomBytesGenerator = new RandomBytesGenerator(genesisSeed + '0');
     const genesisCommitteePK = randomBytesGenerator
       .generateArray(32, committeeSize)
       .map(entropy => SecretKey.fromKeygen(entropy));

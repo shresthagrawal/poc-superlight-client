@@ -23,3 +23,8 @@ export type CommitteeChainInfo = {
   genesisCommittee: Uint8Array[];
   syncCommitteeHashes: Uint8Array[];
 };
+
+export type ResourceURL = {
+  honest: string;
+  dishonest?: string;
+};

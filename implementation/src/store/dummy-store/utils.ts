@@ -14,6 +14,7 @@ import {
   isUint8ArrayEq,
   getRandomInt,
 } from '../../utils';
+import { getUpdateSSZ } from './ssz';
 
 export function hashHeader(header: DummyHeader): Uint8Array {
   return digest(
@@ -38,8 +39,8 @@ export function generateChain(
   seed: string | false,
   maxChainSize: number,
   committeeSize: number,
-  ssz: ContainerType<any>,
 ): CommitteeChainInfo {
+  const ssz = getUpdateSSZ(committeeSize);
   // generate committee using seed
   const randomBytesGenerator = new RandomBytesGenerator(seed || '');
   const nextCommitteePK = () =>
@@ -58,7 +59,7 @@ export function generateChain(
 
   const syncUpdatesRaw = new Array(maxChainSize).fill(null).map((_, i) => {
     console.log(
-      `(${seed ? 'honest' : 'dishonest'}) Creating syncUpdates for period ${i}`,
+      `(${seed || 'dishonest'}) Creating syncUpdates for period ${i}`,
     );
     const nextSyncCommitteePK = nextCommitteePK();
     const nextCommittee = getCommitteeFromPK(nextSyncCommitteePK);
