@@ -32,7 +32,7 @@ const DishonestProverUrls = Array(7)
       `https://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
   );
 
-async function benchmarkSuperlight(chainSize: number, treeDegree: number) {
+async function benchmarkSuperlight(chainSize: number, treeDegree: number, trialIndex: number) {
   const proverUrls = shuffle([HonestProverUrl, ...DishonestProverUrls]);
   const verifier = new DummyStoreVerifier(chainSize, committeeSize);
 
@@ -55,7 +55,7 @@ async function benchmarkSuperlight(chainSize: number, treeDegree: number) {
 
   const result = {
     type: 'superlight',
-    trial,
+    trial: trialIndex,
     ...resultSLBenchmark,
     proverCount,
     isDummy: true,
@@ -70,13 +70,15 @@ async function benchmarkSuperlight(chainSize: number, treeDegree: number) {
 
 async function main() {
   await init('blst-native');
-
-  for (let chainSize of chainSizes) {
-    for (let treeDegree of treeDegrees) {
-      if (treeDegree > chainSize) continue;
-      const result = await benchmarkSuperlight(chainSize, treeDegree);
-      benchmarks.push(result);
-      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+  
+  for (let i = 0; i < trial; i++) {
+    for (let chainSize of chainSizes) {
+      for (let treeDegree of treeDegrees) {
+        if (treeDegree > chainSize) continue;
+        const result = await benchmarkSuperlight(chainSize, treeDegree, i);
+        benchmarks.push(result);
+        fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+      }
     }
   }
 }
