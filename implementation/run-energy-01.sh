@@ -7,6 +7,11 @@ snapshot() {
     acpi --everything > results/energy-01/$1/acpi.txt
     dbus-send --print-reply --system --dest=org.freedesktop.UPower /org/freedesktop/UPower/devices/battery_BAT0 org.freedesktop.UPower.Device.Refresh
     upower -i /org/freedesktop/UPower/devices/battery_BAT0 > results/energy-01/$1/upower.txt
+
+    touch results/energy-01/log.txt
+    echo $1 >> results/energy-01/log.txt
+    upower -i /org/freedesktop/UPower/devices/battery_BAT0 | grep "updated:" >> results/energy-01/log.txt
+    upower -i /org/freedesktop/UPower/devices/battery_BAT0 | grep "energy:" >> results/energy-01/log.txt
 }
 
 
@@ -16,18 +21,22 @@ rm -rfv results/energy-01
 
 snapshot "01_start"
 
-sleep 600;
+# sleep 600;
+sleep 10;
 
 snapshot "02_waited"
 
-TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
+# TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
+TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
 
 snapshot "03_slced"
 
-TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
+# TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
+TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
 
 snapshot "04_lced"
 
-sleep 600;
+# sleep 600;
+sleep 10;
 
 snapshot "05_done"
