@@ -33,7 +33,7 @@ async function main() {
 
   const httpServer = http.createServer();
 
-  httpServer.setTimeout(1000 * 60 * 1); // 1 mins
+  httpServer.setTimeout(1000 * 20); // 20s
   httpServer.on('request', await getApp());
 
   httpServer.listen(PORT, function () {
