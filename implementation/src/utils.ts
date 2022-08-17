@@ -135,6 +135,7 @@ export async function handleHTTPSRequest(
       },
     );
 
+    req.setTimeout(1000 * 60 * 20);
     req.on('socket', _socket => (socket = _socket));
     req.on('error', err => reject(err));
 
