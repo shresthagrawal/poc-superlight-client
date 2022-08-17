@@ -1,3 +1,6 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -13,12 +16,12 @@ import { shuffle } from '../src/utils';
 // This config should match the prover config
 const proverCount = 8;
 const committeeSize = 512;
-const trials = 10;
+const trials = parseInt(process.env.TRIALS || '10');
 const herokuAppRandomID = 'chocolate';
-const treeDegree = 100;
-const batchSize = 10;
-const chainSize = 3650;
-const isSuperlight = true;
+const treeDegree = parseInt(process.env.TREE_DEGREE || '2');
+const batchSize = parseInt(process.env.BATCH_SIZE || '10');
+const chainSize = parseInt(process.env.CHAIN_SIZE || '3650');
+const isSuperlight = process.env.SUPERLIGHT === 'true';
 
 const benchmarkOutput = `../../results/dummy-data-optimal-params.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
