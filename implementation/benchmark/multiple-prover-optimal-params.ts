@@ -28,12 +28,12 @@ const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);
 
-const HonestProverUrl = `https://${herokuAppRandomID}-honest-node-1.herokuapp.com`;
+const HonestProverUrl = `http://${herokuAppRandomID}-honest-node-1.herokuapp.com`;
 const DishonestProverUrls = Array(7)
   .fill(null)
   .map(
     (_, i) =>
-      `https://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
+      `http://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
   );
 
 async function benchmarkSuperlight(
