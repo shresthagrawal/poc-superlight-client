@@ -6,7 +6,7 @@ import { generateChain } from './utils';
 import { getChainInfoSSZ } from './ssz';
 
 const seed = 'seedme';
-const maxChainSize = 365 * 10;
+const maxChainSize = 365 * 30;
 const committeeSize = 512;
 const count = 8;
 
@@ -18,7 +18,7 @@ async function worker(i: number) {
   const chainInfoRaw = ssz.serialize(chainInfo);
   const resultPath = path.join(
     __dirname,
-    `../../../../src/store/data/dummy-chain-${seed + i}`,
+    `../../../../src/store/data/dummy-chain-${maxChainSize}-${seed + i}`,
   );
   fs.writeFileSync(resultPath, chainInfoRaw, { flag: 'w' });
   parentPort!.postMessage(true);

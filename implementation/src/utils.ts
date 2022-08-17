@@ -108,8 +108,11 @@ export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
   url: string,
   isBuffer: boolean = false,
+  logging: boolean = true,
 ): Promise<RequestResult> {
   return new Promise((resolve, reject) => {
+    if(logging)
+      console.log(`${method} ${url}`);
     const data: any[] = [];
     const option = {
       method,
@@ -135,7 +138,7 @@ export async function handleHTTPSRequest(
       },
     );
 
-    req.setTimeout(1000 * 60 * 20);
+    req.setTimeout(1000 * 60 * 1); // 1 mins
     req.on('socket', _socket => (socket = _socket));
     req.on('error', err => reject(err));
 
