@@ -8,10 +8,10 @@ const proverCount = 8;
 const committeeSize = 512;
 const trials = 5;
 const herokuAppRandomID = 'chocolate';
-const batchSizes = [
-  20, 50, 100, 200, 500
-];
-const chainSizes = [30, 20, 15, 10, 7.5, 7.5/2, 7.5/4].map(v => Math.floor(365 * v));
+const batchSizes = [20, 50, 100, 200, 500];
+const chainSizes = [30, 20, 15, 10, 7.5, 7.5 / 2, 7.5 / 4].map(v =>
+  Math.floor(365 * v),
+);
 
 const benchmarkOutput = `../../results/experiment-3.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
@@ -24,11 +24,11 @@ const { honestProverUrl, dishonestProverUrls } = getProverUrls(
 );
 
 const chainConfig = {
-  honestProverUrl, 
+  honestProverUrl,
   dishonestProverUrls,
   committeeSize,
-  proverCount
-}
+  proverCount,
+};
 
 async function main() {
   await init('blst-native');
@@ -39,7 +39,7 @@ async function main() {
         const _batchSize = batchSize < chainSize ? batchSize : chainSize;
         const result = await benchmarkLight(
           chainSize,
-          batchSize,
+          _batchSize,
           trial,
           chainConfig,
           true,

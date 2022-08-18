@@ -8,10 +8,10 @@ const proverCount = 8;
 const committeeSize = 512;
 const trials = 5;
 const herokuAppRandomID = 'chocolate';
-const treeDegrees = [
-  2, 5
-];
-const chainSizes = [30, 15, 7.5, 7.5/2, 7.5/4].map(v => Math.floor(365 * v));
+const treeDegrees = [2, 5];
+const chainSizes = [30, 15, 7.5, 7.5 / 2, 7.5 / 4].map(v =>
+  Math.floor(365 * v),
+);
 
 const benchmarkOutput = `../../results/experiment-2.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
@@ -24,11 +24,11 @@ const { honestProverUrl, dishonestProverUrls } = getProverUrls(
 );
 
 const chainConfig = {
-  honestProverUrl, 
+  honestProverUrl,
   dishonestProverUrls,
   committeeSize,
-  proverCount
-}
+  proverCount,
+};
 
 async function main() {
   await init('blst-native');
@@ -41,7 +41,7 @@ async function main() {
           chainSize,
           _treeDegree,
           trial,
-          chainConfig
+          chainConfig,
         );
         benchmarks.push(result);
         fs.writeFileSync(
