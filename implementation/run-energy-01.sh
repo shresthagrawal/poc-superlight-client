@@ -25,24 +25,22 @@ rm -rfv results/energy-01
 
 snapshot "01_start"
 
-sleep 600;
-# sleep 10;
+sleep 10
 
 snapshot "02_waited"
 
-# TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
-# TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
-TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/energypower-test.js
+TRIALS=1 TREE_DEGREE=100 CHAIN_SIZE=3650 CLIENTCODE=slc node dist/benchmark/energypower-test.js
 
 snapshot "03_slced"
 
-# TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
-# TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
-TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/energypower-test.js
+TRIALS=1 BATCH_SIZE=100 CHAIN_SIZE=3650 CLIENTCODE=lc node dist/benchmark/energypower-test.js
 
 snapshot "04_lced"
 
-sleep 600;
-# sleep 10;
+TRIALS=1 BATCH_SIZE=500 CHAIN_SIZE=3650 CLIENTCODE=olc node dist/benchmark/energypower-test.js
 
-snapshot "05_done"
+snapshot "05_olced"
+
+sleep 10
+
+snapshot "06_done"
