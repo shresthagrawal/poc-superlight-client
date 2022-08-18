@@ -137,9 +137,12 @@ export async function handleHTTPSRequest(
       },
     );
 
-    req.setTimeout(1000 * 20); // 20s
+    req.setTimeout(1000 * 10); // 10s
     req.on('socket', _socket => (socket = _socket));
     req.on('error', err => reject(err));
+    req.on('timeout', () => {
+      req.destroy();
+    });
 
     req.end();
   });

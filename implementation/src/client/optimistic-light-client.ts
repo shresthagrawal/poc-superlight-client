@@ -74,7 +74,7 @@ export class OptimisticLightClient<T> {
         genesisCommitteeHash,
       );
     } else {
-      // TODO: handle if one of the prover lies 
+      // TODO: handle if one of the prover lies
       const prevCommittee = await this.getCommittee(
         period - 1,
         proverInfo1.index,
@@ -165,7 +165,7 @@ export class OptimisticLightClient<T> {
       syncCommitteeHash: new Uint8Array(),
     }));
     while (period <= currentPeriod) {
-      // TODO: add lazy caching 
+      // TODO: add lazy caching
       const committeeHashes: Uint8Array[][] = await Promise.all(
         proverInfos.map(pi =>
           this.provers[pi.index].getLeafHashes(period, this.batchSize),
@@ -176,13 +176,13 @@ export class OptimisticLightClient<T> {
       let conflictingIndex = -1;
       for (let i = 0; i < hashCount; i++) {
         let foundConflict = false;
-        for(let j = 0; j < committeeHashes.length; j++) {
-          if(!isUint8ArrayEq(committeeHashes[j][i], committeeHashes[0][i])) {
+        for (let j = 0; j < committeeHashes.length; j++) {
+          if (!isUint8ArrayEq(committeeHashes[j][i], committeeHashes[0][i])) {
             foundConflict = true;
             break;
           }
         }
-        if(foundConflict) {
+        if (foundConflict) {
           conflictingIndex = i;
           break;
         }
