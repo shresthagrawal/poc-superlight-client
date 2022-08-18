@@ -27,6 +27,7 @@ export class Prover<T> implements IProver<T> {
 
     if (this.store.updateChainSize) this.store.updateChainSize(chainSize);
 
+    this.leafHashes = this.store.getAllSyncCommitteeHashes().hashes;
     this.mmr = new MerkleMountainRange(digest, treeDegree);
     this.mmr.init(this.leafHashes.slice(0, chainSize + 1));
   }
