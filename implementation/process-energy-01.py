@@ -3,6 +3,8 @@
 import re
 import time
 
+N = 10
+
 data = open("results/energy-01/log.txt").read()
 
 energies = re.findall(r"energy:\s*([0-9]*\.[0-9]*) Wh", data)
@@ -18,12 +20,12 @@ datetimes = [ time.mktime(d) for d in datetimes ]
 print(energies)
 print(datetimes)
 
-t_SLC = datetimes[2] - datetimes[1]
-t_LC = datetimes[3] - datetimes[2]
+t_SLC = (datetimes[2] - datetimes[1]) / N
+t_LC = (datetimes[3] - datetimes[2]) / N
 t_idle = datetimes[4] - datetimes[3]
 
-E_SLC = energies[1] - energies[2]
-E_LC = energies[2] - energies[3]
+E_SLC = (energies[1] - energies[2]) / N
+E_LC = (energies[2] - energies[3]) / N
 E_idle = energies[3] - energies[4]
 
 print("Energy SLC [Wh]:", E_SLC)

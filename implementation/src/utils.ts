@@ -8,6 +8,9 @@ import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
 import * as seedrandom from 'seedrandom';
 
+require('log-timestamp');
+
+
 export function logFloor(x: number, base: number = 2) {
   return Decimal.log(x, base).floor().toNumber();
 }
@@ -104,10 +107,10 @@ export type RequestResult = {
   data: object | Buffer;
 };
 
-const my_global_agent = new http.Agent({
-  keepAlive: true,
-  maxSockets: Infinity
-});
+// const my_global_agent = new http.Agent({
+//   keepAlive: true,
+//   maxSockets: Infinity
+// });
 
 export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
@@ -121,7 +124,7 @@ export async function handleHTTPSRequest(
     const data: any[] = [];
     const option = {
       method,
-      agent: my_global_agent,
+      // agent: my_global_agent,
     };
 
     let socket: net.Socket;
@@ -144,9 +147,11 @@ export async function handleHTTPSRequest(
       },
     );
 
-    req.setTimeout(1000 * 20); // 20s
+    // req.setTimeout(1000 * 20); // 20s
+    req.setTimeout(10 * 1000);
     req.on('socket', _socket => (socket = _socket));
     req.on('error', err => reject(err));
+    req.on('timeout', () => { req.destroy(); });
 
     req.end();
   });
