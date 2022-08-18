@@ -9,6 +9,8 @@ import {
   LeafWithProofSSZ,
   MMRInfoSSZ,
   NodeSSZ,
+  LeafHashesSSZ,
+  CommitteeSSZ,
   deepBufferToUint8Array,
 } from './ssz-types';
 
@@ -64,11 +66,32 @@ export class ProverClient<T> implements IProver<T> {
     proof: Uint8Array[][];
   }> {
     const data = await this.getRequest(
-      `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
+      `${this.serverUrl}/sync-committee/mmr/leaf/${period}?proof=true`,
       true,
     );
     const leafWithProof = LeafWithProofSSZ.deserialize(data);
     return deepBufferToUint8Array(leafWithProof);
+  }
+
+  async getLeaf(period: number | 'latest'): Promise<Uint8Array[]> {
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
+      true,
+    );
+    const leaf = CommitteeSSZ.deserialize(data);
+    return deepBufferToUint8Array(leaf);
+  }
+
+  async getLeafHashes(
+    startPeriod: number,
+    maxCount: number,
+  ): Promise<Uint8Array[]> {
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-committee/mmr/leafHashes?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+      true,
+    );
+    const leaves = LeafHashesSSZ.deserialize(data);
+    return deepBufferToUint8Array(leaves);
   }
 
   async getMMRInfo(): Promise<{

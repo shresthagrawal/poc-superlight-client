@@ -146,6 +146,10 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     );
   }
 
+  getCommitteeHash(committee: Uint8Array[]): Uint8Array {
+    return digest(concatUint8Array(committee));
+  }
+
   private deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
     return pubkeys.map(pk => PublicKey.fromBytes(pk));
   }
