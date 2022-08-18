@@ -111,8 +111,7 @@ export async function handleHTTPSRequest(
   logging: boolean = true,
 ): Promise<RequestResult> {
   return new Promise((resolve, reject) => {
-    if(logging)
-      console.log(`${method} ${url}`);
+    if (logging) console.log(`${method} ${url}`);
     const data: any[] = [];
     const option = {
       method,

@@ -5,7 +5,13 @@ import { DummyStoreProver, DummyStoreFetchProver } from '../store/dummy-store';
 import { ISyncStoreProver } from '../store/isync-store';
 import { Prover } from './prover';
 import { fromHexString } from '@chainsafe/ssz';
-import { LeafWithProofSSZ, MMRInfoSSZ, NodeSSZ } from './ssz-types';
+import {
+  LeafWithProofSSZ,
+  MMRInfoSSZ,
+  NodeSSZ,
+  LeafHashesSSZ,
+  CommitteeSSZ,
+} from './ssz-types';
 
 const isHonest = process.env.HONEST !== 'false';
 const isDummy = process.env.DUMMY === 'true';
@@ -68,9 +74,26 @@ export default async function getApp() {
     const prover = ps.getProver();
     const period =
       req.params.period === 'latest' ? 'latest' : parseInt(req.params.period);
-    const leafWithProof = prover.getLeafWithProof(period);
+    const proof = req.query.proof === 'true';
     res.set('Content-Type', 'application/octet-stream');
-    res.end(LeafWithProofSSZ.serialize(leafWithProof));
+    if (proof) {
+      const leafWithProof = prover.getLeafWithProof(period);
+      res.end(LeafWithProofSSZ.serialize(leafWithProof));
+    } else {
+      const leaf = prover.getLeaf(period);
+      res.end(CommitteeSSZ.serialize(leaf));
+    }
+  });
+
+  app.get('/sync-committee/mmr/leafHashes', function (req, res) {
+    if (!ps.initCompleted)
+      return res.status(400).json({ error: 'Prover not initialised' });
+    const prover = ps.getProver();
+    const startPeriod = parseInt(req.query.startPeriod as string);
+    const maxCount = parseInt(req.query.maxCount as string);
+    const leaves = prover.getLeafHashes(startPeriod, maxCount);
+    res.set('Content-Type', 'application/octet-stream');
+    res.end(LeafHashesSSZ.serialize(leaves));
   });
 
   app.get('/sync-committee/mmr', function (req, res) {

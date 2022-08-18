@@ -24,6 +24,8 @@ export interface ISyncStoreVerifer<T> {
     update: T,
   ): false | Uint8Array[];
 
+  getCommitteeHash(committee: Uint8Array[]): Uint8Array;
+
   // same as syncUpdateVerifyGetCommittee but checks if the
   // currentCommittee is same as the committee from the update
   syncUpdateVerify(

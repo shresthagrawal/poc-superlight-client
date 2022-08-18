@@ -1,7 +1,12 @@
 import { ContainerType, ListCompositeType } from '@chainsafe/ssz';
 import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
+import { digest } from '@chainsafe/as-sha256';
 import { ISyncStoreVerifer } from '../isync-store';
-import { RandomBytesGenerator, isUint8ArrayEq } from '../../utils';
+import {
+  RandomBytesGenerator,
+  isUint8ArrayEq,
+  concatUint8Array,
+} from '../../utils';
 import { DummyUpdateRaw, DummyUpdate } from './types';
 import { hashHeader, fromRawUpdate } from './utils';
 import { getUpdateSSZ } from './ssz';
@@ -27,6 +32,10 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
       pk.toPublicKey().toBytes(),
     );
     this.genesisPeriod = 0;
+  }
+
+  getCommitteeHash(committee: Uint8Array[]): Uint8Array {
+    return digest(concatUint8Array(committee));
   }
 
   syncUpdateVerifyGetCommittee(

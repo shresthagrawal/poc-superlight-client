@@ -14,7 +14,7 @@ const MAX_DEGREE = 100000;
 const MAX_CHAINSIZE = 100000;
 const MAX_COMMITTEE_SIZE = 1000;
 
-const CommitteeSSZ = new ListCompositeType(
+export const CommitteeSSZ = new ListCompositeType(
   new ByteVectorType(48),
   MAX_COMMITTEE_SIZE,
 );
@@ -40,6 +40,7 @@ export const NodeSSZ = new ContainerType({
   isLeaf: new BooleanType(),
   children: ChildrenSSZ,
 });
+export const LeafHashesSSZ = new ListCompositeType(HashSSZ, MAX_CHAINSIZE);
 
 function deepTypecast<T>(
   obj: any,

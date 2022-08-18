@@ -8,14 +8,17 @@ export class Prover<T> implements IProver<T> {
   protected mmr: MerkleMountainRange;
   startPeriod: number;
   chainSize: number;
+  leafHashes: Uint8Array[];
 
   constructor(public store: ISyncStoreProver<T>, protected treeDegree = 2) {
-    const { startPeriod, hashes } = store.getAllSyncCommitteeHashes();
+    const { startPeriod, hashes: leafHashes } =
+      store.getAllSyncCommitteeHashes();
     this.startPeriod = startPeriod;
-    this.chainSize = hashes.length - 1;
+    this.chainSize = leafHashes.length - 1;
+    this.leafHashes = leafHashes;
 
     this.mmr = new MerkleMountainRange(digest, treeDegree);
-    this.mmr.init(hashes);
+    this.mmr.init(leafHashes);
   }
 
   setConfig(chainSize: number, treeDegree: number) {
@@ -25,8 +28,7 @@ export class Prover<T> implements IProver<T> {
     if (this.store.updateChainSize) this.store.updateChainSize(chainSize);
 
     this.mmr = new MerkleMountainRange(digest, treeDegree);
-    const { hashes } = this.store.getAllSyncCommitteeHashes();
-    this.mmr.init(hashes.slice(0, chainSize + 1));
+    this.mmr.init(this.leafHashes.slice(0, chainSize + 1));
   }
 
   get latestPeriod() {
@@ -47,6 +49,11 @@ export class Prover<T> implements IProver<T> {
       rootHash,
       proof,
     };
+  }
+
+  getLeaf(period: number | 'latest'): Uint8Array[] {
+    if (period === 'latest') period = this.latestPeriod;
+    return this.store.getSyncCommittee(period);
   }
 
   getMMRInfo(): {
@@ -81,5 +88,13 @@ export class Prover<T> implements IProver<T> {
     return Array(count)
       .fill(0)
       .map((_, i) => this.store.getSyncUpdate(startPeriod + i));
+  }
+
+  getLeafHashes(startPeriod: number, maxCount: number): Uint8Array[] {
+    const count =
+      startPeriod + maxCount - 1 > this.latestPeriod
+        ? this.latestPeriod - startPeriod + 1
+        : maxCount;
+    return this.leafHashes.slice(startPeriod, startPeriod + maxCount);
   }
 }
