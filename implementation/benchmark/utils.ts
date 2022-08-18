@@ -8,19 +8,22 @@ import { Benchmark } from '../src/benchmark';
 import { shuffle } from '../src/utils';
 
 export type ChainConfig = {
-  honestProverUrl: string,
-  dishonestProverUrls: string[],
-  committeeSize: number,
-  proverCount: number
-}
+  honestProverUrl: string;
+  dishonestProverUrls: string[];
+  committeeSize: number;
+  proverCount: number;
+};
 
 export async function benchmarkSuperlight(
   chainSize: number,
   treeDegree: number,
   trial: number,
-  chainConfig: ChainConfig
+  chainConfig: ChainConfig,
 ) {
-  const proverUrls = shuffle([chainConfig.honestProverUrl, ...chainConfig.dishonestProverUrls]);
+  const proverUrls = shuffle([
+    chainConfig.honestProverUrl,
+    ...chainConfig.dishonestProverUrls,
+  ]);
   const verifier = new DummyStoreVerifier(chainSize, chainConfig.committeeSize);
 
   const benchmarkSL = new Benchmark();
@@ -62,7 +65,10 @@ export async function benchmarkLight(
   chainConfig: ChainConfig,
   optimistic: boolean = false,
 ) {
-  const proverUrls = shuffle([chainConfig.honestProverUrl, ...chainConfig.dishonestProverUrls]);
+  const proverUrls = shuffle([
+    chainConfig.honestProverUrl,
+    ...chainConfig.dishonestProverUrls,
+  ]);
   const verifier = new DummyStoreVerifier(chainSize, chainConfig.committeeSize);
 
   const benchmarkL = new Benchmark();
