@@ -74,18 +74,19 @@ export class OptimisticLightClient<T> {
         genesisCommitteeHash,
       );
     } else {
+      // TODO: handle if one of the prover lies 
       const prevCommittee = await this.getCommittee(
         period - 1,
         proverInfo1.index,
         prevCommitteeHash,
       );
-      const syncUpdate1 = await this.checkCommitteeHashAt(
+      is1Correct = await this.checkCommitteeHashAt(
         proverInfo1.index,
         proverInfo1.syncCommitteeHash,
         period,
         prevCommittee,
       );
-      const syncUpdate2 = await this.checkCommitteeHashAt(
+      is2Correct = await this.checkCommitteeHashAt(
         proverInfo2.index,
         proverInfo2.syncCommitteeHash,
         period,
@@ -164,15 +165,29 @@ export class OptimisticLightClient<T> {
       syncCommitteeHash: new Uint8Array(),
     }));
     while (period <= currentPeriod) {
+      // TODO: add lazy caching 
       const committeeHashes: Uint8Array[][] = await Promise.all(
         proverInfos.map(pi =>
           this.provers[pi.index].getLeafHashes(period, this.batchSize),
         ),
       );
+      // TODO: should be min of the committeeHashes[i].length
       const hashCount = committeeHashes[0].length;
-      const conflictingIndex = committeeHashes.findIndex(ch =>
-        ch.every(h => isUint8ArrayEq(ch[0], h)),
-      );
+      let conflictingIndex = -1;
+      for (let i = 0; i < hashCount; i++) {
+        let foundConflict = false;
+        for(let j = 0; j < committeeHashes.length; j++) {
+          if(!isUint8ArrayEq(committeeHashes[j][i], committeeHashes[0][i])) {
+            foundConflict = true;
+            break;
+          }
+        }
+        if(foundConflict) {
+          conflictingIndex = i;
+          break;
+        }
+      }
+
       if (conflictingIndex === -1) {
         period += hashCount;
         lastCommitteeHash = committeeHashes[0][hashCount - 1];
