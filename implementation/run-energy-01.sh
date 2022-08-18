@@ -1,5 +1,8 @@
 #!/bin/bash -ve
 
+# MAKE SURE TO:   /proc/sys/net/ipv4# echo 0 > tcp_tw_reuse
+
+
 snapshot() {
     mkdir -p results/energy-01/$1
     cp -v /sys/class/power_supply/BAT0/{capacity,capacity_level,charge_full,charge_full_design,charge_now,current_now,voltage_now,voltage_min_design} results/energy-01/$1/
@@ -27,12 +30,14 @@ sleep 10;
 snapshot "02_waited"
 
 # TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
-TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
+# TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/multiple-prover-optimal-params.js
+TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=true node dist/benchmark/energypower-test.js
 
 snapshot "03_slced"
 
 # TRIALS=10 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
-TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
+# TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/multiple-prover-optimal-params.js
+TRIALS=1 TREE_DEGREE=75 BATCH_SIZE=50 CHAIN_SIZE=3650 SUPERLIGHT=false node dist/benchmark/energypower-test.js
 
 snapshot "04_lced"
 

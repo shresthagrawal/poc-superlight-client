@@ -104,6 +104,11 @@ export type RequestResult = {
   data: object | Buffer;
 };
 
+const my_global_agent = new http.Agent({
+  keepAlive: true,
+  maxSockets: Infinity
+});
+
 export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
   url: string,
@@ -111,11 +116,12 @@ export async function handleHTTPSRequest(
   logging: boolean = true,
 ): Promise<RequestResult> {
   return new Promise((resolve, reject) => {
-    if(logging)
+    if (logging)
       console.log(`${method} ${url}`);
     const data: any[] = [];
     const option = {
       method,
+      agent: my_global_agent,
     };
 
     let socket: net.Socket;
