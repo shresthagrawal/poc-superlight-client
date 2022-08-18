@@ -9,12 +9,13 @@ const committeeSize = 512;
 const trials = 5;
 const herokuAppRandomID = 'chocolate';
 const treeDegrees = [
-  2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000,
-].reverse();
-const batchSizes = [
-  10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000,
-].reverse();
-const chainSizes = [30 * 365];
+  2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000,
+];
+const batchSizesOLC = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+const batchSizesLC = [1, 2, 5, 10, 20, 50, 100, 200, 500];
+const chainSizesOLC = [10, 20, 30].map(v => Math.floor(v * 365));
+const chainSizesSLC = [10, 20, 30].map(v => Math.floor(v * 365));
+const chainSizesLC = [5, 10, 15].map(v => Math.floor(v * 365));
 
 const benchmarkOutput = `../../results/experiment-0.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
@@ -37,12 +38,12 @@ async function main() {
   await init('blst-native');
 
   for (let trial = 0; trial < trials; trial++) {
-    for (let chainSize of chainSizes) {
-      for (let batchSize of batchSizes) {
-        if (batchSize > chainSize) continue;
+    for (let chainSize of chainSizesOLC) {
+      for (let batchSize of batchSizesOLC) {
+        const _batchSize = batchSize < chainSize ? batchSize : chainSize;
         const result = await benchmarkLight(
           chainSize,
-          batchSize,
+          _batchSize,
           trial,
           chainConfig,
           true,
@@ -52,15 +53,18 @@ async function main() {
           absBenchmarkOutput,
           JSON.stringify(benchmarks, null, 2),
         );
+        if (batchSize > chainSize) break;
       }
     }
+  }
 
-    for (let chainSize of chainSizes) {
+  for (let trial = 0; trial < trials; trial++) {
+    for (let chainSize of chainSizesSLC) {
       for (let treeDegree of treeDegrees) {
-        if (treeDegree > chainSize) continue;
+        const _treeDegree = treeDegree < chainSize ? treeDegree : chainSize;
         const result = await benchmarkSuperlight(
           chainSize,
-          treeDegree,
+          _treeDegree,
           trial,
           chainConfig,
         );
@@ -69,7 +73,23 @@ async function main() {
           absBenchmarkOutput,
           JSON.stringify(benchmarks, null, 2),
         );
+        if (treeDegree > chainSize) break;
       }
+    }
+  }
+
+  for (let chainSize of chainSizesLC) {
+    for (let batchSize of batchSizesLC) {
+      const _batchSize = batchSize < chainSize ? batchSize : chainSize;
+      const result = await benchmarkLight(
+        chainSize,
+        _batchSize,
+        0,
+        chainConfig,
+      );
+      benchmarks.push(result);
+      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+      if (batchSize > chainSize) break;
     }
   }
 }
