@@ -1,19 +1,19 @@
 import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getProverUrls, benchmarkSuperlight } from './utils';
+import { getProverUrls, benchmarkLight } from './utils';
 
 // This config should match the prover config
 const proverCount = 8;
 const committeeSize = 512;
 const trials = 5;
 const herokuAppRandomID = 'chocolate';
-const treeDegrees = [
-  2, 5
+const batchSizes = [
+  20, 50, 100, 200, 500
 ];
-const chainSizes = [30, 15, 7.5, 7.5/2, 7.5/4].map(v => Math.floor(365 * v));
+const chainSizes = [30, 20, 15, 10, 7.5, 7.5/2, 7.5/4].map(v => Math.floor(365 * v));
 
-const benchmarkOutput = `../../results/experiment-2.json`;
+const benchmarkOutput = `../../results/experiment-3.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);
@@ -35,20 +35,21 @@ async function main() {
 
   for (let trial = 0; trial < trials; trial++) {
     for (let chainSize of chainSizes) {
-      for (let treeDegree of treeDegrees) {
-        const _treeDegree = treeDegree < chainSize ? treeDegree : chainSize;
-        const result = await benchmarkSuperlight(
+      for (let batchSize of batchSizes) {
+        const _batchSize = batchSize < chainSize ? batchSize : chainSize;
+        const result = await benchmarkLight(
           chainSize,
-          _treeDegree,
+          batchSize,
           trial,
-          chainConfig
+          chainConfig,
+          true,
         );
         benchmarks.push(result);
         fs.writeFileSync(
           absBenchmarkOutput,
           JSON.stringify(benchmarks, null, 2),
         );
-        if (treeDegree > chainSize) break;
+        if (batchSize > chainSize) break;
       }
     }
   }
