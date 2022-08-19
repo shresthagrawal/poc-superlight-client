@@ -15,9 +15,12 @@ const committeeSize = 512;
 const trial = 4;
 const herokuAppRandomID = 'chocolate';
 const treeDegrees = [
-  2, 3, 5, 10, 25, 50, 75, 100, 150, 200, 300, 500, 1000, 2500, 3650, 5475, 10950,
+  2, 3, 5, 10, 25, 50, 75, 100, 150, 200, 300, 500, 1000, 2500, 3650, 5475,
+  10950,
 ];
-const chainSizes = [30, 15, 7.5, 7.5/2, 7.5/4].map(c => Math.floor(c * 365));
+const chainSizes = [30, 15, 7.5, 7.5 / 2, 7.5 / 4].map(c =>
+  Math.floor(c * 365),
+);
 
 const benchmarkOutput = `../../results/dummy-data-sl-chainsize.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
@@ -32,7 +35,11 @@ const DishonestProverUrls = Array(7)
       `https://${herokuAppRandomID}-dishonest-node-${i + 1}.herokuapp.com`,
   );
 
-async function benchmarkSuperlight(chainSize: number, treeDegree: number, trialIndex: number) {
+async function benchmarkSuperlight(
+  chainSize: number,
+  treeDegree: number,
+  trialIndex: number,
+) {
   const proverUrls = shuffle([HonestProverUrl, ...DishonestProverUrls]);
   const verifier = new DummyStoreVerifier(chainSize, committeeSize);
 
@@ -70,14 +77,17 @@ async function benchmarkSuperlight(chainSize: number, treeDegree: number, trialI
 
 async function main() {
   await init('blst-native');
-  
+
   for (let i = 0; i < trial; i++) {
     for (let chainSize of chainSizes) {
       for (let treeDegree of treeDegrees) {
         if (treeDegree > chainSize) continue;
         const result = await benchmarkSuperlight(chainSize, treeDegree, i);
         benchmarks.push(result);
-        fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+        fs.writeFileSync(
+          absBenchmarkOutput,
+          JSON.stringify(benchmarks, null, 2),
+        );
       }
     }
   }
