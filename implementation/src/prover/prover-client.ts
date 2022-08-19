@@ -15,11 +15,19 @@ import {
 } from './ssz-types';
 
 export class ProverClient<T> implements IProver<T> {
+  cachedGetRequestResult: Map<String, Buffer>;
+  cachedLeafHash: Map<number, Uint8Array>;
+  cachedSyncUpdate: Map<number, T>;
+
   constructor(
     protected store: ISyncStoreVerifer<T>,
     protected serverUrl: string,
     protected benchmark: Benchmark,
-  ) {}
+  ) {
+    this.cachedGetRequestResult = new Map();
+    this.cachedLeafHash = new Map();
+    this.cachedSyncUpdate = new Map();
+  }
 
   protected async request(
     method: 'GET' | 'POST',
@@ -52,6 +60,18 @@ export class ProverClient<T> implements IProver<T> {
     return this.request('GET', url, isBuffer, retry);
   }
 
+  protected async cachedGetRequest(
+    url: string,
+    isBuffer: boolean = false,
+    retry: number = 5,
+  ): Promise<any> {
+    if (!this.cachedGetRequestResult.has(url)) {
+      const val = await this.getRequest(url, isBuffer, retry);
+      this.cachedGetRequestResult.set(url, val);
+    }
+    return this.cachedGetRequestResult.get(url);
+  }
+
   protected async postRequest(
     url: string,
     isBuffer: boolean = false,
@@ -65,7 +85,7 @@ export class ProverClient<T> implements IProver<T> {
     rootHash: Uint8Array;
     proof: Uint8Array[][];
   }> {
-    const data = await this.getRequest(
+    const data = await this.cachedGetRequest(
       `${this.serverUrl}/sync-committee/mmr/leaf/${period}?proof=true`,
       true,
     );
@@ -74,7 +94,7 @@ export class ProverClient<T> implements IProver<T> {
   }
 
   async getLeaf(period: number | 'latest'): Promise<Uint8Array[]> {
-    const data = await this.getRequest(
+    const data = await this.cachedGetRequest(
       `${this.serverUrl}/sync-committee/mmr/leaf/${period}`,
       true,
     );
@@ -86,19 +106,26 @@ export class ProverClient<T> implements IProver<T> {
     startPeriod: number,
     maxCount: number,
   ): Promise<Uint8Array[]> {
-    const data = await this.getRequest(
-      `${this.serverUrl}/sync-committee/mmr/leafHashes?startPeriod=${startPeriod}&maxCount=${maxCount}`,
-      true,
-    );
-    const leaves = LeafHashesSSZ.deserialize(data);
-    return deepBufferToUint8Array(leaves);
+    if (!this.cachedLeafHash.has(startPeriod)) {
+      const data = await this.getRequest(
+        `${this.serverUrl}/sync-committee/mmr/leafHashes?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+        true,
+      );
+      const leaves = LeafHashesSSZ.deserialize(data);
+      const vals = deepBufferToUint8Array(leaves);
+      for (let i = 0; i < maxCount; i++) {
+        this.cachedLeafHash.set(startPeriod + i, vals[i]);
+      }
+    }
+
+    return [this.cachedLeafHash.get(startPeriod)!];
   }
 
   async getMMRInfo(): Promise<{
     rootHash: Uint8Array;
     peaks: Peaks;
   }> {
-    const data = await this.getRequest(
+    const data = await this.cachedGetRequest(
       `${this.serverUrl}/sync-committee/mmr`,
       true,
     );
@@ -110,7 +137,7 @@ export class ProverClient<T> implements IProver<T> {
     treeRoot: Uint8Array,
     nodeHash: Uint8Array,
   ): Promise<{ isLeaf: boolean; children?: Uint8Array[] }> {
-    const data = await this.getRequest(
+    const data = await this.cachedGetRequest(
       `${this.serverUrl}/sync-committee/mmr/${toHexString(
         treeRoot,
       )}/node/${toHexString(nodeHash)}`,
@@ -121,11 +148,19 @@ export class ProverClient<T> implements IProver<T> {
   }
 
   async getSyncUpdates(startPeriod: number, maxCount: number): Promise<T[]> {
-    const data = await this.getRequest(
-      `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
-      true,
-    );
-    return this.store.updatesFromBytes(data, maxCount);
+    if (!this.cachedSyncUpdate.has(startPeriod)) {
+      const data = await this.getRequest(
+        `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+        true,
+      );
+      const vals = this.store.updatesFromBytes(data, maxCount);
+      for (let i = 0; i < maxCount; i++) {
+        this.cachedSyncUpdate.set(startPeriod + i, vals[i]);
+      }
+    }
+
+    return [this.cachedSyncUpdate.get(startPeriod)!];
+
   }
 
   async setConfig(chainSize: number, treeDegree: number) {
