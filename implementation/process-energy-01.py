@@ -3,7 +3,8 @@
 import re
 import time
 
-N = 1
+N_slcolc = 5
+N_lc = 1
 
 data = open("results/energy-01/log.txt").read()
 
@@ -20,14 +21,14 @@ datetimes = [ time.mktime(d) for d in datetimes ]
 print(energies)
 print(datetimes)
 
-t_SLC = (datetimes[2] - datetimes[1]) / N
-t_LC = (datetimes[3] - datetimes[2]) / N
-t_OLC = (datetimes[4] - datetimes[3]) / N
+t_SLC = (datetimes[2] - datetimes[1]) / N_slcolc
+t_LC = (datetimes[3] - datetimes[2]) / N_lc
+t_OLC = (datetimes[4] - datetimes[3]) / N_slcolc
 t_idle = datetimes[5] - datetimes[4]
 
-E_SLC = (energies[1] - energies[2]) / N
-E_LC = (energies[2] - energies[3]) / N
-E_OLC = (energies[3] - energies[4]) / N
+E_SLC = (energies[1] - energies[2]) / N_slcolc
+E_LC = (energies[2] - energies[3]) / N_lc
+E_OLC = (energies[3] - energies[4]) / N_slcolc
 E_idle = energies[4] - energies[5]
 
 print("Time idle [s]:", t_idle)
