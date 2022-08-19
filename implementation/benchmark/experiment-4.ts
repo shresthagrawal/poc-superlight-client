@@ -14,7 +14,7 @@ const treeDegrees = [
 const batchSizesOLC = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
 const chainSizes = [5, 10].map(v => Math.floor(v * 365));
 
-const benchmarkOutput = `../../results/experiment-0.json`;
+const benchmarkOutput = `../../results/experiment-4.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);

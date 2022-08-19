@@ -17,7 +17,7 @@ const chainSizesOLC = [10, 20, 30].map(v => Math.floor(v * 365));
 const chainSizesSLC = [10, 20, 30].map(v => Math.floor(v * 365));
 const chainSizesLC = [5, 10, 15].map(v => Math.floor(v * 365));
 
-const benchmarkOutput = `../../results/experiment-0.json`;
+const benchmarkOutput = `../../results/experiment-1.json`;
 const absBenchmarkOutput = path.join(__dirname, benchmarkOutput);
 let benchmarks: any[] = [];
 if (fs.existsSync(absBenchmarkOutput)) benchmarks = require(benchmarkOutput);
