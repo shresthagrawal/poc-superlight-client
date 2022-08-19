@@ -4,6 +4,7 @@ import {
   isUint8ArrayEq,
   smallHexStr,
   isCommitteeSame,
+  logFloor
 } from '../utils';
 import { MerkleVerify } from '../merkle-tree';
 import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
@@ -13,8 +14,8 @@ import { IProver } from '../prover/iprover';
 export type ProverInfo = {
   root: Uint8Array;
   peaks: Peaks;
-  syncCommittee: Uint8Array[];
   index: number;
+  syncCommittee?: Uint8Array[];
 };
 
 export class SuperlightClient<T> {
@@ -124,33 +125,31 @@ export class SuperlightClient<T> {
     prover2: IProver<T>,
     tree1: Uint8Array,
     tree2: Uint8Array,
+    stepsToLeafs: number,
     node1: Uint8Array = tree1,
     node2: Uint8Array = tree2,
     index: number = 0,
   ): Promise<boolean | number> {
-    // get node info
-    const nodeInfo1 = await prover1.getNode(tree1, node1);
-    const nodeInfo2 = await prover2.getNode(tree2, node2);
-
-    if (nodeInfo1.isLeaf !== nodeInfo2.isLeaf)
-      throw new Error('tree of unequal heights recieved');
+    // if (nodeInfo1.isLeaf !== nodeInfo2.isLeaf)
+    //   throw new Error('tree of unequal heights recieved');
 
     // if you reach the leaf then this is the first point of disagreement
-    if (nodeInfo1.isLeaf) {
+    if (stepsToLeafs === 0) {
       console.log(`Found first point of disagreement at index(${index})`);
       return index;
+
     } else {
+      // get node info
+      const nodeInfo1 = await prover1.getNode(tree1, node1);
+      const nodeInfo2 = await prover2.getNode(tree2, node2);
+
       const children1 = nodeInfo1.children!;
       console.log(
-        `Compare node1(${smallHexStr(node1)}) with children1(${children1.map(
-          smallHexStr,
-        )})`,
+        `Compare node1(${smallHexStr(node1)})`,
       );
       const children2 = nodeInfo2.children!;
       console.log(
-        `Compare node2(${smallHexStr(node1)}) with children2(${children2.map(
-          smallHexStr,
-        )})`,
+        `Compare node2(${smallHexStr(node2)})`,
       );
       // check the children are correct
       const parentHash1 = digest(concatUint8Array(children1));
@@ -169,6 +168,7 @@ export class SuperlightClient<T> {
             prover2,
             tree1,
             tree2,
+            stepsToLeafs - 1,
             children1[i],
             children2[i],
             index * this.n + i,
@@ -205,6 +205,7 @@ export class SuperlightClient<T> {
           prover2,
           peaks1[i].rootHash,
           peaks2[i].rootHash,
+          logFloor(peaks1[i].size, this.n),
         );
         if (typeof winnerOrIndexOfDifference === 'boolean')
           return winnerOrIndexOfDifference;
@@ -283,26 +284,28 @@ export class SuperlightClient<T> {
         continue;
       }
 
-      const syncCommittee = await this.getVerifiedSyncCommittee(
-        prover,
-        'latest',
-        mmrInfo.peaks,
-      );
-      if (!syncCommittee) {
-        console.log(
-          `Prover(${i}) filtered because of invalid last syncCommittee merkle proof`,
-        );
-        continue;
-      }
-
       validProverInfos.push({
         root: mmrInfo.rootHash,
         peaks: mmrInfo.peaks,
-        syncCommittee,
         index: i,
       });
     }
 
-    return this.tournament(validProverInfos);
+    const winners = await this.tournament(validProverInfos);
+
+    for (const winner of winners) {
+      const syncCommittee = await this.getVerifiedSyncCommittee(
+        this.provers[winner.index],
+        'latest',
+        winner.peaks,
+      );
+      if (syncCommittee) {
+        return [{
+          ...winner,
+          syncCommittee,
+        }];
+      }
+    }
+    throw new Error('all winners cheated');
   }
 }
