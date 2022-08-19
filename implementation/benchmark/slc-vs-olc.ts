@@ -17,9 +17,11 @@ const committeeSize = 512;
 const trial = 1;
 const herokuAppRandomID = 'chocolate';
 const treeDegrees = [
-  2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000
+  2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000,
 ].reverse();
-const batchSizes = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000].reverse();
+const batchSizes = [
+  1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000,
+].reverse();
 const chainSizes = [30 * 365];
 
 const benchmarkOutput = `../../results/slc-vs-olc.json`;
