@@ -107,10 +107,8 @@ export type RequestResult = {
   data: object | Buffer;
 };
 
-// const my_global_agent = new http.Agent({
-//   keepAlive: true,
-//   maxSockets: Infinity
-// });
+
+const REQUEST_TIMEOUT = 10 * 1000;
 
 export async function handleHTTPSRequest(
   method: 'GET' | 'POST',
@@ -119,8 +117,12 @@ export async function handleHTTPSRequest(
   logging: boolean = true,
 ): Promise<RequestResult> {
   return new Promise((resolve, reject) => {
-    if (logging)
-      console.log(`${method} ${url}`);
+    const timer = setTimeout(
+      () => reject(new Error(`Timeout`)),
+      REQUEST_TIMEOUT,
+    );
+
+    if (logging) console.log(`${method} ${url}`);
     const data: any[] = [];
     const option = {
       method,
@@ -136,6 +138,7 @@ export async function handleHTTPSRequest(
       resp => {
         resp.on('data', chunk => data.push(chunk));
         resp.on('end', () => {
+          clearTimeout(timer);
           resolve({
             data: isBuffer
               ? Buffer.concat(data)
@@ -147,11 +150,14 @@ export async function handleHTTPSRequest(
       },
     );
 
-    req.setTimeout(1000 * 10); // 10s
+    req.setTimeout(REQUEST_TIMEOUT);
     req.on('socket', _socket => (socket = _socket));
-    req.on('error', err => reject(err));
+    req.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
     req.on('timeout', () => {
-      req.destroy();
+      req.destroy(new Error('timeout'));
     });
 
     req.end();
