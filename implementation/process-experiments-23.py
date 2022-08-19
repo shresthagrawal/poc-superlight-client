@@ -4,6 +4,16 @@ import json
 from collections import defaultdict
 
 beacon_data_file = 'results/aggregate-experiment-23.json'
+beacon_data_file_2 = 'results/experiment-2.json'
+beacon_data_file_3 = 'results/experiment-3.json'
+
+with open(beacon_data_file_2) as d2:
+    with open(beacon_data_file_3) as d3:
+        beacon_benchmarks_2 = json.load(d2)
+        beacon_benchmarks_3 = json.load(d3)
+        d = beacon_benchmarks_2 + beacon_benchmarks_3
+        json.dump(d, open(beacon_data_file, 'w'))
+
 with open(beacon_data_file) as d:
     beacon_benchmarks = json.load(d)
 
