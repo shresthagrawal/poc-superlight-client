@@ -22,31 +22,31 @@ export class LightClient<T> {
     startCommittee: Uint8Array[],
   ): Promise<{ syncCommittee: Uint8Array[]; period: number }> {
     for (
-      let batchStartPeriod = startPeriod;
-      batchStartPeriod < currentPeriod;
-      batchStartPeriod += this.batchSize
+      let period = startPeriod;
+      period < currentPeriod;
+      period += 1
     ) {
-      const updates = await prover.getSyncUpdates(
-        batchStartPeriod,
+      const update = await prover.getSyncUpdate(
+        period,
         this.batchSize,
       );
 
-      for (let i = 0; i < updates.length; i++) {
-        const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
-          startCommittee,
-          updates[i],
+      const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
+        startCommittee,
+        update,
+      );
+
+      if (!(validOrCommittee as boolean)) {
+        console.log(
+          `Found invalid update at period(${period})`,
         );
-        if (!(validOrCommittee as boolean)) {
-          console.log(
-            `Found invalid update at period(${batchStartPeriod + i})`,
-          );
-          return {
-            syncCommittee: startCommittee,
-            period: batchStartPeriod + i,
-          };
-        }
-        startCommittee = validOrCommittee as Uint8Array[];
+        return {
+          syncCommittee: startCommittee,
+          period,
+        };
       }
+      
+      startCommittee = validOrCommittee as Uint8Array[];
     }
     return {
       syncCommittee: startCommittee,
