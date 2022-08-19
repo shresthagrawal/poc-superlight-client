@@ -6,7 +6,7 @@ import { getProverUrls, benchmarkLight, benchmarkSuperlight } from './utils';
 // This config should match the prover config
 const proverCount = 8;
 const committeeSize = 512;
-const trials = 0;//5;
+const trials = 5;
 const herokuAppRandomID = 'chocolate';
 const treeDegrees = [
   2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000,
@@ -37,18 +37,20 @@ const chainConfig = {
 async function main() {
   await init('blst-native');
 
-  for (let chainSize of chainSizesLC) {
-    for (let batchSize of batchSizesLC) {
-      const _batchSize = batchSize < chainSize ? batchSize : chainSize;
-      const result = await benchmarkLight(
-        chainSize,
-        _batchSize,
-        0,
-        chainConfig,
-      );
-      benchmarks.push(result);
-      fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
-      if (batchSize > chainSize) break;
+  for (let trial = 0; trial < trials; trial++) {
+    for (let chainSize of chainSizesLC) {
+      for (let batchSize of batchSizesLC) {
+        const _batchSize = batchSize < chainSize ? batchSize : chainSize;
+        const result = await benchmarkLight(
+          chainSize,
+          _batchSize,
+          0,
+          chainConfig,
+        );
+        benchmarks.push(result);
+        fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+        if (batchSize > chainSize) break;
+      }
     }
   }
 
