@@ -53,4 +53,4 @@ sleep 600
 
 snapshot "8_done"
 
-speaker-test -t sine -f 1000 -l 1
+speaker-test -t sine -f 500 -l 1
