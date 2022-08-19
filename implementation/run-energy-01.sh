@@ -23,24 +23,34 @@ snapshot() {
 rm -rfv results/energy-01
 
 
-snapshot "01_start"
+snapshot "1_starting"
 
-sleep 20
+sleep 600
 
-snapshot "02_waited"
+snapshot "2_waited"
 
-TRIALS=5 TREE_DEGREE=100 CHAIN_SIZE=3650 CLIENTCODE=slc node dist/benchmark/energypower-test.js
+TRIALS=25 TREE_DEGREE=100 CHAIN_SIZE=3650 CLIENTCODE=slc node dist/benchmark/energypower-test.js
 
-snapshot "03_slced"
+snapshot "3_slced"
 
-TRIALS=1 BATCH_SIZE=50 CHAIN_SIZE=3650 CLIENTCODE=lc node dist/benchmark/energypower-test.js
+sleep 60
 
-snapshot "04_lced"
+snapshot "4_slced_waited"
 
-TRIALS=5 BATCH_SIZE=500 CHAIN_SIZE=3650 CLIENTCODE=olc node dist/benchmark/energypower-test.js
+TRIALS=5 BATCH_SIZE=200 CHAIN_SIZE=3650 CLIENTCODE=lc node dist/benchmark/energypower-test.js
 
-snapshot "05_olced"
+snapshot "5_lced"
 
-sleep 20
+sleep 60
 
-snapshot "06_done"
+snapshot "6_lced_waited"
+
+TRIALS=25 BATCH_SIZE=500 CHAIN_SIZE=3650 CLIENTCODE=olc node dist/benchmark/energypower-test.js
+
+snapshot "7_olced"
+
+sleep 600
+
+snapshot "8_done"
+
+speaker-test -t sine -f 1000 -l 1
