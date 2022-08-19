@@ -1,18 +1,18 @@
 01_start
-  updated:              Thu 18 Aug 2022 04:53:32 PM PDT (0 seconds ago)
-    energy:              64.526 Wh
+  updated:              Fri 19 Aug 2022 12:43:23 AM PDT (0 seconds ago)
+    energy:              58.6047 Wh
 02_waited
-  updated:              Thu 18 Aug 2022 04:53:42 PM PDT (0 seconds ago)
-    energy:              64.5106 Wh
+  updated:              Fri 19 Aug 2022 12:43:33 AM PDT (0 seconds ago)
+    energy:              58.5739 Wh
 03_slced
-  updated:              Thu 18 Aug 2022 04:54:00 PM PDT (0 seconds ago)
-    energy:              64.4798 Wh
+  updated:              Fri 19 Aug 2022 12:43:44 AM PDT (0 seconds ago)
+    energy:              58.5508 Wh
 04_lced
-  updated:              Thu 18 Aug 2022 04:55:29 PM PDT (0 seconds ago)
-    energy:              64.1333 Wh
+  updated:              Fri 19 Aug 2022 12:46:52 AM PDT (0 seconds ago)
+    energy:              57.9271 Wh
 05_olced
-  updated:              Thu 18 Aug 2022 04:55:45 PM PDT (0 seconds ago)
-    energy:              64.1025 Wh
+  updated:              Fri 19 Aug 2022 12:47:03 AM PDT (0 seconds ago)
+    energy:              57.8963 Wh
 06_done
-  updated:              Thu 18 Aug 2022 04:55:55 PM PDT (0 seconds ago)
-    energy:              64.0794 Wh
+  updated:              Fri 19 Aug 2022 12:47:13 AM PDT (0 seconds ago)
+    energy:              57.8732 Wh

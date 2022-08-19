@@ -33,7 +33,7 @@ TRIALS=1 TREE_DEGREE=100 CHAIN_SIZE=3650 CLIENTCODE=slc node dist/benchmark/ener
 
 snapshot "03_slced"
 
-TRIALS=1 BATCH_SIZE=100 CHAIN_SIZE=3650 CLIENTCODE=lc node dist/benchmark/energypower-test.js
+TRIALS=1 BATCH_SIZE=40 CHAIN_SIZE=3650 CLIENTCODE=lc node dist/benchmark/energypower-test.js
 
 snapshot "04_lced"
 
