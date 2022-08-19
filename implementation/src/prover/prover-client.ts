@@ -102,23 +102,29 @@ export class ProverClient<T> implements IProver<T> {
     return deepBufferToUint8Array(leaf);
   }
 
-  async getLeafHashes(
+  async _getLeafHashes(
     startPeriod: number,
     maxCount: number,
   ): Promise<Uint8Array[]> {
-    if (!this.cachedLeafHash.has(startPeriod)) {
-      const data = await this.getRequest(
-        `${this.serverUrl}/sync-committee/mmr/leafHashes?startPeriod=${startPeriod}&maxCount=${maxCount}`,
-        true,
-      );
-      const leaves = LeafHashesSSZ.deserialize(data);
-      const vals = deepBufferToUint8Array(leaves);
-      for (let i = 0; i < maxCount; i++) {
-        this.cachedLeafHash.set(startPeriod + i, vals[i]);
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-committee/mmr/leafHashes?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+      true,
+    );
+    const leaves = LeafHashesSSZ.deserialize(data);
+    return deepBufferToUint8Array(leaves);
+  }
+
+  async getLeafHash(
+    period: number,
+    cacheCount: number,
+  ): Promise<Uint8Array> {
+    if (!this.cachedLeafHash.has(period)) {
+      const vals = await this._getLeafHashes(period, cacheCount);
+      for (let i = 0; i < cacheCount; i++) {
+        this.cachedLeafHash.set(period + i, vals[i]);
       }
     }
-
-    return [this.cachedLeafHash.get(startPeriod)!];
+    return this.cachedLeafHash.get(period)!;
   }
 
   async getMMRInfo(): Promise<{
@@ -147,20 +153,22 @@ export class ProverClient<T> implements IProver<T> {
     return deepBufferToUint8Array(nodeInfo);
   }
 
-  async getSyncUpdates(startPeriod: number, maxCount: number): Promise<T[]> {
-    if (!this.cachedSyncUpdate.has(startPeriod)) {
-      const data = await this.getRequest(
-        `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
-        true,
-      );
-      const vals = this.store.updatesFromBytes(data, maxCount);
-      for (let i = 0; i < maxCount; i++) {
-        this.cachedSyncUpdate.set(startPeriod + i, vals[i]);
+  async _getSyncUpdates(startPeriod: number, maxCount: number): Promise<T[]> {
+    const data = await this.getRequest(
+      `${this.serverUrl}/sync-updates?startPeriod=${startPeriod}&maxCount=${maxCount}`,
+      true,
+    );
+    return this.store.updatesFromBytes(data, maxCount);
+  }
+
+  async getSyncUpdate(period: number, cacheCount: number): Promise<T> {
+    if (!this.cachedSyncUpdate.has(period)) {
+      const vals = await this._getSyncUpdates(period, cacheCount);
+      for (let i = 0; i < cacheCount; i++) {
+        this.cachedSyncUpdate.set(period + i, vals[i]);
       }
     }
-
-    return [this.cachedSyncUpdate.get(startPeriod)!];
-
+    return this.cachedSyncUpdate.get(period)!;
   }
 
   async setConfig(chainSize: number, treeDegree: number) {

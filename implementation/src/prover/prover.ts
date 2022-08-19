@@ -81,7 +81,7 @@ export class Prover<T> implements IProver<T> {
     };
   }
 
-  getSyncUpdates(startPeriod: number, maxCount: number): T[] {
+  _getSyncUpdates(startPeriod: number, maxCount: number): T[] {
     const count =
       startPeriod + maxCount - 1 >= this.latestPeriod
         ? this.latestPeriod - startPeriod
@@ -91,11 +91,19 @@ export class Prover<T> implements IProver<T> {
       .map((_, i) => this.store.getSyncUpdate(startPeriod + i));
   }
 
-  getLeafHashes(startPeriod: number, maxCount: number): Uint8Array[] {
+  getSyncUpdate(period: number, cacheCount: number): T {
+    return this.store.getSyncUpdate(period);
+  }
+
+  _getLeafHashes(startPeriod: number, maxCount: number): Uint8Array[] {
     const count =
       startPeriod + maxCount - 1 > this.latestPeriod
         ? this.latestPeriod - startPeriod + 1
         : maxCount;
     return this.leafHashes.slice(startPeriod, startPeriod + maxCount);
+  }
+
+  getLeafHash(period: number, cacheCount: number): Uint8Array {
+    return this.leafHashes[period];
   }
 }

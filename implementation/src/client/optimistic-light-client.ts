@@ -37,9 +37,7 @@ export class OptimisticLightClient<T> {
     period: number,
     prevCommittee: Uint8Array[],
   ): Promise<boolean> {
-    const update = (
-      await this.provers[proverIndex].getSyncUpdates(period - 1, 1)
-    )[0];
+    const update = await this.provers[proverIndex].getSyncUpdate(period - 1, 1);
     const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
       prevCommittee,
       update,
@@ -158,59 +156,41 @@ export class OptimisticLightClient<T> {
       `Sync started using ${this.provers.length} Provers from period(${startPeriod}) to period(${currentPeriod})`,
     );
 
-    let period = startPeriod;
     let lastCommitteeHash: Uint8Array | null = null;
     let proverInfos: ProverInfo[] = this.provers.map((_, i) => ({
       index: i,
       syncCommitteeHash: new Uint8Array(),
     }));
-    while (period <= currentPeriod) {
-      // TODO: add lazy caching
-      const committeeHashes: Uint8Array[][] = await Promise.all(
+    
+    for(let period = startPeriod; period < currentPeriod; period++) {
+      const committeeHashes: Uint8Array[] = await Promise.all(
         proverInfos.map(pi =>
-          this.provers[pi.index].getLeafHashes(period, this.batchSize),
+          this.provers[pi.index].getLeafHash(period, this.batchSize),
         ),
       );
-      // TODO: should be min of the committeeHashes[i].length
-      const hashCount = committeeHashes[0].length;
-      let conflictingIndex = -1;
-      for (let i = 0; i < hashCount; i++) {
-        let foundConflict = false;
-        for (let j = 0; j < committeeHashes.length; j++) {
-          if (!isUint8ArrayEq(committeeHashes[j][i], committeeHashes[0][i])) {
-            foundConflict = true;
-            break;
-          }
-        }
-        if (foundConflict) {
-          conflictingIndex = i;
+      
+      let foundConflict = false;
+      for (let j = 0; j < committeeHashes.length; j++) {
+        if (!isUint8ArrayEq(committeeHashes[j], committeeHashes[0])) {
+          foundConflict = true;
           break;
         }
       }
 
-      if (conflictingIndex === -1) {
-        period += hashCount;
-        lastCommitteeHash = committeeHashes[0][hashCount - 1];
-        proverInfos = proverInfos.map(pi => ({
-          ...pi,
-          syncCommitteeHash: lastCommitteeHash as Uint8Array,
-        }));
-      } else {
-        if (conflictingIndex > 0) {
-          lastCommitteeHash = committeeHashes[0][conflictingIndex - 1];
-        }
-        proverInfos = proverInfos.map((pi, i) => ({
-          ...pi,
-          syncCommitteeHash: committeeHashes[i][conflictingIndex],
-        }));
-        period += conflictingIndex;
+      proverInfos = proverInfos.map((pi, i) => ({
+        ...pi,
+        syncCommitteeHash: committeeHashes[i],
+      }));
+
+      if (foundConflict) {
         proverInfos = await this.tournament(
           proverInfos,
           period,
           lastCommitteeHash,
         );
         if (proverInfos.length < 2) break;
-      }
+      } 
+      lastCommitteeHash = proverInfos[0].syncCommitteeHash;
     }
 
     // TODO: improve this; this might fail if a malicious prover behaves honestly until the last step

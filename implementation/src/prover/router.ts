@@ -91,7 +91,7 @@ export default async function getApp() {
     const prover = ps.getProver();
     const startPeriod = parseInt(req.query.startPeriod as string);
     const maxCount = parseInt(req.query.maxCount as string);
-    const leaves = prover.getLeafHashes(startPeriod, maxCount);
+    const leaves = prover._getLeafHashes(startPeriod, maxCount);
     res.set('Content-Type', 'application/octet-stream');
     res.end(LeafHashesSSZ.serialize(leaves));
   });
@@ -132,7 +132,7 @@ export default async function getApp() {
         .json({ error: 'startPeriod or maxCount not provided' });
     const startPeriod = parseInt(req.query.startPeriod as string);
     const maxCount = parseInt(req.query.maxCount as string);
-    const updates = prover.getSyncUpdates(startPeriod, maxCount);
+    const updates = prover._getSyncUpdates(startPeriod, maxCount);
     const updatesBytes = store.updatesToBytes(updates, maxCount);
     res.set('Content-Type', 'application/octet-stream');
     res.end(updatesBytes);

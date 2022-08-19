@@ -10,10 +10,15 @@ export interface IProver<T> {
 
   getLeaf(period: number | 'latest'): AsyncOrSync<Uint8Array[]>;
 
-  getLeafHashes(
+  _getLeafHashes(
     startPeriod: number,
     maxCount: number,
   ): AsyncOrSync<Uint8Array[]>;
+
+  getLeafHash(
+    period: number,
+    cacheCount: number,
+  ): AsyncOrSync<Uint8Array>;
 
   getMMRInfo(): AsyncOrSync<{
     rootHash: Uint8Array;
@@ -25,5 +30,7 @@ export interface IProver<T> {
     nodeHash: Uint8Array,
   ): AsyncOrSync<{ isLeaf: boolean; children?: Uint8Array[] }>;
 
-  getSyncUpdates(startPeriod: number, maxCount: number): AsyncOrSync<T[]>;
+  _getSyncUpdates(startPeriod: number, maxCount: number): AsyncOrSync<T[]>;
+
+  getSyncUpdate(period: number, cacheCount: number): AsyncOrSync<T>;
 }
