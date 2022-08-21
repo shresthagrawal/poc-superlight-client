@@ -8,6 +8,9 @@ import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
 import * as seedrandom from 'seedrandom';
 
+require('log-timestamp');
+
+
 export function logFloor(x: number, base: number = 2) {
   return Decimal.log(x, base).floor().toNumber();
 }
@@ -123,6 +126,7 @@ export async function handleHTTPSRequest(
     const data: any[] = [];
     const option = {
       method,
+      // agent: my_global_agent,
     };
 
     let socket: net.Socket;
