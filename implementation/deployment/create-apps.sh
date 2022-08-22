@@ -1,11 +1,15 @@
+# just a random string to avoid name collision among heroku apps
+random="chocolate"
+
 # Create one honest node
-heroku create "honest-node-1"
-git remote add "$name" "https://git.heroku.com/honest-node-1.git"
+name="$random-honest-node-1"
+heroku create "$name" 
+git remote add "$name" "https://git.heroku.com/$name.git"
 
 # Create 13 dishonest nodes
 for index in {1..13}
 do
-    name="dishonest-node-$index"
+    name="$random-dishonest-node-$index"
     heroku create "$name"
     git remote add "$name" "https://git.heroku.com/$name.git"
 done

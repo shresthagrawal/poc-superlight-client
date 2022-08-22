@@ -1,27 +1,29 @@
 import { ssz, altair } from '@chainsafe/lodestar-types';
+import { digest } from '@chainsafe/as-sha256';
 import {
   defaultChainConfig,
   createIBeaconConfig,
   IBeaconConfig,
 } from '@chainsafe/lodestar-config';
 import { PublicKey } from '@chainsafe/bls';
+import { ListCompositeType } from '@chainsafe/ssz';
 import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
 import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
 import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
 import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
-import * as SyncUpdatesJson from './data/beacon-sync-updates.json';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 import {
   isUint8ArrayEq,
   isCommitteeSame,
   getRandomInt,
   generateRandomSyncCommittee,
+  concatUint8Array,
 } from '../utils';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   defaultChainConfig,
-  parseInt(SyncUpdatesJson[SyncUpdatesJson.length - 1].header.slot),
+  parseInt(GenesisSnapshotJson.currentSlot),
 );
 
 // TODO: fix types
@@ -35,7 +37,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   constructor(
     // This is required for testing purpose to make dishonest clients
     public honest: boolean = true,
-    syncUpdatesJson: any[] = SyncUpdatesJson,
+    syncUpdatesJson: any[] = require('./data/beacon-sync-updates.json'),
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
     this.syncUpdates = syncUpdatesJson.map(u =>
@@ -80,13 +82,13 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     }
   }
 
-  getAllSyncCommittees(): {
+  getAllSyncCommitteeHashes(): {
     startPeriod: number;
-    syncCommittees: Uint8Array[][];
+    hashes: Uint8Array[];
   } {
     return {
       startPeriod: this.startPeriod,
-      syncCommittees: this.syncCommittees,
+      hashes: this.syncCommittees.map(c => digest(concatUint8Array(c))),
     };
   }
 
@@ -108,8 +110,12 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     return this.syncUpdates[index];
   }
 
-  updateToJson(update: BeaconUpdate) {
-    return ssz.altair.LightClientUpdate.toJson(update);
+  updatesToBytes(update: BeaconUpdate[], maxItems: number): Uint8Array {
+    // TODO: check the reason for type error
+    return new ListCompositeType(
+      ssz.altair.LightClientUpdate as any,
+      maxItems,
+    ).serialize(update);
   }
 }
 
@@ -140,6 +146,10 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     );
   }
 
+  getCommitteeHash(committee: Uint8Array[]): Uint8Array {
+    return digest(concatUint8Array(committee));
+  }
+
   private deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
     return pubkeys.map(pk => PublicKey.fromBytes(pk));
   }
@@ -156,6 +166,24 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
       pubkeys,
       aggregatePubkey: PublicKey.aggregate(pubkeys),
     };
+  }
+
+  syncUpdateVerifyGetCommittee(
+    prevCommittee: Uint8Array[],
+    update: BeaconUpdate,
+  ): false | Uint8Array[] {
+    const prevCommitteeFast = this.deserializeSyncCommittee(prevCommittee);
+    try {
+      // check if the update has valid signatures
+      assertValidLightClientUpdate(
+        this.beaconConfig,
+        prevCommitteeFast,
+        update,
+      );
+      return update.nextSyncCommittee.pubkeys;
+    } catch (e) {
+      return false;
+    }
   }
 
   syncUpdateVerify(
@@ -196,7 +224,11 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     return this.genesisPeriod;
   }
 
-  updateFromJson(jsonUpdate: any) {
-    return ssz.altair.LightClientUpdate.fromJson(jsonUpdate);
+  updatesFromBytes(bytesUpdates: Uint8Array, maxItems: number): BeaconUpdate[] {
+    // TODO: check the reason for type error
+    return new ListCompositeType(
+      ssz.altair.LightClientUpdate as any,
+      maxItems,
+    ).deserialize(bytesUpdates);
   }
 }
