@@ -1,9 +1,15 @@
+import * as https from 'https';
+import * as http from 'http';
+import { URL } from 'url';
+import * as net from 'net';
+
+import Decimal from 'decimal.js';
 import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
 import * as seedrandom from 'seedrandom';
 
 export function logFloor(x: number, base: number = 2) {
-  return Math.floor(Math.log(x) / Math.log(base));
+  return Decimal.log(x, base).floor().toNumber();
 }
 
 export function concatUint8Array(data: Uint8Array[]) {
@@ -41,19 +47,22 @@ export function getRandomInt(max: number) {
 
 export const smallHexStr = (data: Uint8Array) => toHexString(data).slice(0, 8);
 
-export function getRandomBytesArray(
-  seed: string,
-  bytesPerElement: number,
-  elements: number,
-): Uint8Array[] {
-  const prng = seedrandom(seed);
-  return new Array(elements).fill(null).map(() => {
-    const res = new Uint8Array(bytesPerElement);
-    for (let i = 0; i < bytesPerElement; i++) {
-      res[i] = Math.floor(prng() * 256);
-    }
-    return res;
-  });
+export class RandomBytesGenerator {
+  prng: seedrandom.PRNG;
+
+  constructor(seed: string) {
+    this.prng = seedrandom(seed);
+  }
+
+  generateArray(bytesPerElement: number, elements: number): Uint8Array[] {
+    return new Array(elements).fill(null).map(() => {
+      const res = new Uint8Array(bytesPerElement);
+      for (let i = 0; i < bytesPerElement; i++) {
+        res[i] = Math.floor(this.prng() * 256);
+      }
+      return res;
+    });
+  }
 }
 
 export function numberToUint8Array(num: number): Uint8Array {
@@ -86,5 +95,67 @@ export function shuffle(array: any[]) {
 export async function wait(ms: number) {
   return new Promise((resolve, reject) => {
     setTimeout(resolve, ms);
-  })
+  });
+}
+
+export type RequestResult = {
+  bytesRead: number;
+  bytesWritten: number;
+  data: object | Buffer;
+};
+
+
+const REQUEST_TIMEOUT = 10 * 1000;
+
+export async function handleHTTPSRequest(
+  method: 'GET' | 'POST',
+  url: string,
+  isBuffer: boolean = false,
+  logging: boolean = true,
+): Promise<RequestResult> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Timeout`)),
+      REQUEST_TIMEOUT,
+    );
+
+    if (logging) console.log(`${method} ${url}`);
+    const data: any[] = [];
+    const option = {
+      method,
+    };
+
+    let socket: net.Socket;
+
+    const _url = new URL(url);
+    const req = (_url.protocol === 'http:' ? http : https).request(
+      url,
+      option,
+      resp => {
+        resp.on('data', chunk => data.push(chunk));
+        resp.on('end', () => {
+          clearTimeout(timer);
+          resolve({
+            data: isBuffer
+              ? Buffer.concat(data)
+              : JSON.parse(Buffer.concat(data).toString()),
+            bytesRead: socket.bytesRead,
+            bytesWritten: socket.bytesWritten,
+          });
+        });
+      },
+    );
+
+    req.setTimeout(REQUEST_TIMEOUT);
+    req.on('socket', _socket => (socket = _socket));
+    req.on('error', err => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error('timeout'));
+    });
+
+    req.end();
+  });
 }

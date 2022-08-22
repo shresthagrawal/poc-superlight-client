@@ -8,6 +8,18 @@ export interface IProver<T> {
     proof: Uint8Array[][];
   }>;
 
+  getLeaf(period: number | 'latest'): AsyncOrSync<Uint8Array[]>;
+
+  _getLeafHashes(
+    startPeriod: number,
+    maxCount: number,
+  ): AsyncOrSync<Uint8Array[]>;
+
+  getLeafHash(
+    period: number,
+    cacheCount: number,
+  ): AsyncOrSync<Uint8Array>;
+
   getMMRInfo(): AsyncOrSync<{
     rootHash: Uint8Array;
     peaks: Peaks;
@@ -18,9 +30,7 @@ export interface IProver<T> {
     nodeHash: Uint8Array,
   ): AsyncOrSync<{ isLeaf: boolean; children?: Uint8Array[] }>;
 
-  getSyncUpdate(period: number | 'latest'): AsyncOrSync<T>;
+  _getSyncUpdates(startPeriod: number, maxCount: number): AsyncOrSync<T[]>;
 
-  getSyncUpdateWithNextCommittee(
-    period: number,
-  ): AsyncOrSync<{ update: T; syncCommittee: Uint8Array[] }>;
+  getSyncUpdate(period: number, cacheCount: number): AsyncOrSync<T>;
 }

@@ -1,17 +1,33 @@
+import { AsyncOrSync } from 'ts-essentials';
+
 export interface ISyncStoreProver<T> {
-  getAllSyncCommittees(): {
+  init?(): AsyncOrSync<void>;
+
+  getAllSyncCommitteeHashes(): {
     startPeriod: number;
-    syncCommittees: Uint8Array[][];
+    hashes: Uint8Array[];
   };
 
   getSyncCommittee(period: number): Uint8Array[];
 
   getSyncUpdate(period: number): T;
 
-  updateToJson(update: T): any;
+  updatesToBytes(update: T[], maxItems: number): Uint8Array;
+
+  // optional function to update chain size
+  updateChainSize?(chainSize: number): void;
 }
 
 export interface ISyncStoreVerifer<T> {
+  syncUpdateVerifyGetCommittee(
+    prevCommittee: Uint8Array[],
+    update: T,
+  ): false | Uint8Array[];
+
+  getCommitteeHash(committee: Uint8Array[]): Uint8Array;
+
+  // same as syncUpdateVerifyGetCommittee but checks if the
+  // currentCommittee is same as the committee from the update
   syncUpdateVerify(
     prevCommittee: Uint8Array[],
     currentCommittee: Uint8Array[],
@@ -24,5 +40,5 @@ export interface ISyncStoreVerifer<T> {
 
   getGenesisPeriod(): number;
 
-  updateFromJson(jsonUpdate: any): T;
+  updatesFromBytes(bytesUpdate: Uint8Array, maxItems: number): T[];
 }
