@@ -6,10 +6,12 @@ import bodyParser from 'body-parser';
 import { JSONRPCServer } from 'json-rpc-2.0';
 import { VerifiedProvider } from './verifiedProvider';
 
+const RPC_URL = process.env.RPC_URL || '';
+
 function getApp() {
     const server = new JSONRPCServer();
     const app = express();
-    const provider = new VerifiedProvider();
+    const provider = new VerifiedProvider(RPC_URL);
     provider.sync();
 
     server.addMethod('eth_getBalance', async ([address, blockNumber]: [string, string]) => {

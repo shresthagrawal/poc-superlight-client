@@ -1,4 +1,4 @@
-import * as express from 'express';
+import express from 'express';
 import { init } from '@chainsafe/bls';
 import { BeaconStoreProver } from '../store/beacon-store';
 import { DummyStoreProver, DummyStoreFetchProver } from '../store/dummy-store';
