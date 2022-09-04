@@ -1,3 +1,5 @@
+import { GetProof } from 'web3-eth';
+import { BlockNumber } from 'web3-core';
 
 export type Bytes = string;
 export type Bytes32 = string;
@@ -11,3 +13,24 @@ export interface RpcTx {
   value?: string;
   data?: string;
 }
+
+export type AccountRequest = {
+  type: 'account';
+  blockNumber: BlockNumber;
+  address: Address;
+  storageSlots: Bytes32[];
+}
+
+export type CodeRequest = {
+  type: 'code';
+  blockNumber: BlockNumber;
+  address: Address;
+}
+
+export type AccountResponse = GetProof;
+export type CodeResponse = string;
+
+export type Request = AccountRequest | CodeRequest;
+export type Response = AccountResponse | CodeResponse;
+
+export type RequestMethodCallback = (error: Error, data: Response) => void;
