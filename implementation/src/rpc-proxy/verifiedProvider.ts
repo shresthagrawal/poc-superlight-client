@@ -87,27 +87,16 @@ export class VerifiedProvider {
   }
 
   async getBalance(address: Address, blockNumber: BlockNumber) {
-    // TODO: fix the state root
-    const proof = await this.getProof(address, [], blockNumber, '0x');
-    return '0x' + BigInt(proof.balance).toString(16);
+    // TODO: 1. get the state root from blockNumber
+    //       2. create a request to get account
+    //       3. verify the account proof and return the balance
+    return '0x0';
   }
 
   private async getVerifiedRoot(blockNumber: BlockNumber) {
     if (blockNumber === this.blockNumber && this.stateRoot)
       return this.stateRoot;
     throw new Error('incomplete implementation');
-  }
-
-  async getCode(
-    address: Address,
-    blockNumber: BlockNumber,
-    codeHash: Bytes32,
-  ): Promise<string> {
-    const code = await this.web3.eth.getCode(address, blockNumber);
-    if (!this.verifyCodeHash(code, codeHash)) {
-      throw new Error('Invalid code or codeHash');
-    }
-    return code;
   }
 
   private constructRequestMethod(request: Request, callback: (error: Error, data: Response) => void): Method {
@@ -187,6 +176,10 @@ export class VerifiedProvider {
     for (const [accountProof, code] of responses) {
       const { nonce, balance, codeHash, storageProof: storageAccesses } = accountProof;
       const address = AddressEthereumJs.fromString(accountProof.address);
+      const isAccountCorrect = await this.verifyProof(accountProof.address, stateRoot, accountProof);
+      const isCodeCorrect = await this.verifyCodeHash(code, codeHash);
+      // TODO: if proof fails uses some other RPC?
+      if (!accountProof.address || !isCodeCorrect) throw new Error('Invalid RPC proof');
 
       const account = Account.fromAccountData({
         nonce: BigInt(nonce),
@@ -261,25 +254,6 @@ export class VerifiedProvider {
         message: error.message.toString(),
       };
     }
-  }
-
-  async getProof(
-    address: Address,
-    storageKeys: Bytes32[],
-    blockNumber: BlockNumber,
-    stateRoot: Bytes32,
-  ): Promise<GetProof> {
-    const proof = await this.web3.eth.getProof(
-      address,
-      storageKeys,
-      blockNumber,
-    );
-    // TODO: fix me
-    // const stateRoot = await this.getVerifiedRoot(blockNumber);
-    const isCorrect = await this.verifyProof(address, stateRoot, proof);
-    // TODO: if proof fails uses some other RPC?
-    if (!isCorrect) throw new Error('Invalid RPC Proof');
-    return proof;
   }
 
   private verifyCodeHash(code: Bytes, codeHash: Bytes32): boolean {
