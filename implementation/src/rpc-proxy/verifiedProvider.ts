@@ -16,9 +16,11 @@ import {
   zeros,
   isTruthy
 } from '@ethereumjs/util';
-import { Address, Bytes32, RpcTx } from './types';
+import { Address, Bytes32, RpcTx, Access, AccessProof } from './types';
 import { ZERO_ADDR, GAS_LIMIT, INTERNAL_ERROR } from './constants';
 import { VM } from '@ethereumjs/vm';
+import chunk from 'lodash.chunk';
+import flatten from 'lodash.flatten';
 
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
 const bigIntStrToHex = (n: string) => '0x' + BigInt(n).toString(16);
@@ -69,6 +71,44 @@ export class VerifiedProvider {
     return code;
   }
 
+  private async getAccessProofs(
+    blockNumber: BlockNumber,
+    accesses: Access[]
+  ): Promise<AccessProof[]> {
+    // TODO: split requests into multiple smaller batches 
+    const batch = new this.web3.BatchRequest();
+    const promises = accesses.map((access) => {
+      return new Promise<AccessProof>((resolve, reject) => {
+        // Type error ignored due to https://github.com/ChainSafe/web3.js/issues/4655
+        // @ts-ignore
+        const request = this.web3.eth.getProof.request(
+          access.address,
+          access.storageKeys,
+          blockNumber,
+          (error: Error, proof: GetProof) => {
+            if (error) reject(error);
+            resolve({ access, proof });
+          }
+        );
+        batch.add(request);
+      });
+    });
+    batch.execute();
+    return Promise.all(promises);
+  }
+
+  private async getBatchAccessProofs(
+    blockNumber: BlockNumber,
+    accesses: Access[],
+    batchSize: number
+  ): Promise<AccessProof[]> {
+    const batches = chunk(accesses, batchSize);
+    const proofs = batches.map((batch) => {
+      return this.getAccessProofs(blockNumber, batch);
+    });
+    return flatten(await Promise.all(proofs));
+  }
+
   private async getVM(tx: RpcTx, blockNumber: BlockNumber): Promise<VM> {
     const _tx = {
       ...tx,
@@ -89,14 +129,9 @@ export class VerifiedProvider {
     const vm = await VM.create({ common: this.common });
 
     await vm.stateManager.checkpoint();
-    // TODO: use batching to speed this up
-    for (let access of accessList) {
-      const proof = await this.getProof(
-        access.address,
-        access.storageKeys,
-        blockNumber,
-      );
 
+    const accessProofs = await this.getBatchAccessProofs(blockNumber, accessList, 100);
+    for (let { access, proof } of accessProofs) {
       const { nonce, balance, codeHash, storageProof: storageAccesses } = proof;
       const code = await this.getCode(access.address, blockNumber, codeHash);
       const address = AddressEthereumJs.fromString(access.address);
