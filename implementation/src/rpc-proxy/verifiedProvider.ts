@@ -16,12 +16,14 @@ import {
   zeros,
   isTruthy
 } from '@ethereumjs/util';
-import { Address, Bytes32, RpcTx } from './types';
-import { ZERO_ADDR, GAS_LIMIT, INTERNAL_ERROR } from './constants';
+import { Address, Bytes32, RpcTx, Bytes } from './types';
+import { ZERO_ADDR, GAS_LIMIT, INTERNAL_ERROR, EMPTY_ACCOUNT_EXTCODEHASH } from './constants';
 import { VM } from '@ethereumjs/vm';
 
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
 const bigIntStrToHex = (n: string) => '0x' + BigInt(n).toString(16);
+
+
 
 export class VerifiedProvider {
   web3: Web3;
@@ -61,11 +63,12 @@ export class VerifiedProvider {
   async getCode(
     address: Address,
     blockNumber: BlockNumber,
-    codeHash?: Bytes32
+    codeHash: Bytes32
   ): Promise<string> {
     const code = await this.web3.eth.getCode(address, blockNumber);
-    // TODO: if the codeHash is provided check the keccak256 or else
-    // get the code hash using getProof
+    if(!this.verifyCodeHash(code, codeHash)) {
+      throw new Error('Invalid code or codeHash');
+    }
     return code;
   }
 
@@ -179,6 +182,11 @@ export class VerifiedProvider {
     // TODO: if proof fails uses some other RPC?
     // if (!isCorrect) throw new Error('Invalid RPC Proof');
     return proof;
+  }
+
+  private verifyCodeHash(code: Bytes, codeHash: Bytes32): boolean {
+    return (code === '0x' && codeHash === EMPTY_ACCOUNT_EXTCODEHASH) || 
+            Web3.utils.keccak256(code) === codeHash;
   }
 
   // Only verifies the account proof
