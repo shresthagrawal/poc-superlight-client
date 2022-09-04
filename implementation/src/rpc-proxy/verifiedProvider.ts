@@ -1,6 +1,7 @@
 import Web3 from 'web3';
 import { GetProof } from 'web3-eth';
 import { BlockNumber } from 'web3-core';
+import { Method } from 'web3-core-method';
 import { Trie } from '@ethereumjs/trie';
 import rlp from 'rlp';
 import { fromHexString } from '@chainsafe/ssz';
@@ -16,8 +17,24 @@ import {
   zeros,
   isTruthy
 } from '@ethereumjs/util';
-import { Address, Bytes32, RpcTx, Access, AccessProof } from './types';
-import { ZERO_ADDR, GAS_LIMIT, INTERNAL_ERROR } from './constants';
+import {
+  Address,
+  Bytes32,
+  RpcTx,
+  Request,
+  AccountRequest,
+  CodeRequest,
+  Response,
+  AccountResponse,
+  CodeResponse,
+  RequestMethodCallback
+} from './types';
+import {
+  ZERO_ADDR,
+  GAS_LIMIT,
+  INTERNAL_ERROR,
+  REQUEST_BATCH_SIZE
+} from './constants';
 import { VM } from '@ethereumjs/vm';
 import chunk from 'lodash.chunk';
 import flatten from 'lodash.flatten';
@@ -31,6 +48,23 @@ export class VerifiedProvider {
   public isSynced: boolean = false;
   public stateRoot: string | null = null;
   public blockNumber: number | null =  null;
+
+  private requestTypeToMethod: Record<Request['type'], (request: Request, callback: RequestMethodCallback) => Method> = {
+    // Type errors ignored due to https://github.com/ChainSafe/web3.js/issues/4655
+    // @ts-ignore
+    'account': (request: AccountRequest, callback) => this.web3.eth.getProof.request(
+      request.address,
+      request.storageSlots,
+      request.blockNumber,
+      callback
+    ),
+    // @ts-ignore
+    'code': (request: CodeRequest, callback) => this.web3.eth.getCode.request(
+      request.address,
+      request.blockNumber,
+      callback
+    ),
+  }
 
   constructor(
     providerURL: string
@@ -71,42 +105,39 @@ export class VerifiedProvider {
     return code;
   }
 
-  private async getAccessProofs(
-    blockNumber: BlockNumber,
-    accesses: Access[]
-  ): Promise<AccessProof[]> {
+  private constructRequestMethod(request: Request, callback: (error: Error, data: Response) => void): Method {
+    return this.requestTypeToMethod[request.type](request, callback);
+  }
+
+  private async fetchRequests(requests: Request[]): Promise<Response[]> {
     // TODO: split requests into multiple smaller batches 
     const batch = new this.web3.BatchRequest();
-    const promises = accesses.map((access) => {
-      return new Promise<AccessProof>((resolve, reject) => {
+    const promises = requests.map((request) => {
+      return new Promise<Response>((resolve, reject) => {
         // Type error ignored due to https://github.com/ChainSafe/web3.js/issues/4655
-        // @ts-ignore
-        const request = this.web3.eth.getProof.request(
-          access.address,
-          access.storageKeys,
-          blockNumber,
-          (error: Error, proof: GetProof) => {
+        const method = this.constructRequestMethod(
+          request,
+          (error: Error, data: Response) => {
             if (error) reject(error);
-            resolve({ access, proof });
+            resolve(data);
           }
         );
-        batch.add(request);
+        batch.add(method);
       });
     });
     batch.execute();
     return Promise.all(promises);
   }
 
-  private async getBatchAccessProofs(
-    blockNumber: BlockNumber,
-    accesses: Access[],
+  private async fetchRequestsInBatches(
+    requests: Request[],
     batchSize: number
-  ): Promise<AccessProof[]> {
-    const batches = chunk(accesses, batchSize);
-    const proofs = batches.map((batch) => {
-      return this.getAccessProofs(blockNumber, batch);
+  ): Promise<Response[]> {
+    const batchedRequests = chunk(requests, batchSize);
+    const responses = batchedRequests.map((requestBatch) => {
+      return this.fetchRequests(requestBatch);
     });
-    return flatten(await Promise.all(proofs));
+    return flatten(await Promise.all(responses));
   }
 
   private async getVM(tx: RpcTx, blockNumber: BlockNumber): Promise<VM> {
@@ -130,11 +161,29 @@ export class VerifiedProvider {
 
     await vm.stateManager.checkpoint();
 
-    const accessProofs = await this.getBatchAccessProofs(blockNumber, accessList, 100);
-    for (let { access, proof } of accessProofs) {
-      const { nonce, balance, codeHash, storageProof: storageAccesses } = proof;
-      const code = await this.getCode(access.address, blockNumber, codeHash);
-      const address = AddressEthereumJs.fromString(access.address);
+    const responses = chunk(
+      await this.fetchRequestsInBatches(
+        flatten(accessList.map((access) => {
+          return [
+            {
+              type: 'account',
+              blockNumber,
+              storageSlots: access.storageKeys,
+              address: access.address,
+            },
+            {
+              type: 'code',
+              blockNumber,
+              address: access.address,
+            }, 
+          ]
+        }
+      )), REQUEST_BATCH_SIZE
+    ), 2);
+
+    for (const [accountProof, code] of responses as [AccountResponse, CodeResponse][]) {
+      const { nonce, balance, codeHash, storageProof: storageAccesses } = accountProof;
+      const address = AddressEthereumJs.fromString(accountProof.address);
 
       const account = Account.fromAccountData({
         nonce: bigIntStrToHex(nonce),
