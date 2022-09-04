@@ -14,27 +14,28 @@ import {
   TypeOutput,
   setLengthLeft,
   zeros,
-  isTruthy
+  isTruthy,
 } from '@ethereumjs/util';
 import { Address, Bytes32, RpcTx, Bytes } from './types';
-import { ZERO_ADDR, GAS_LIMIT, INTERNAL_ERROR, EMPTY_ACCOUNT_EXTCODEHASH } from './constants';
+import {
+  ZERO_ADDR,
+  GAS_LIMIT,
+  INTERNAL_ERROR,
+  EMPTY_ACCOUNT_EXTCODEHASH,
+} from './constants';
 import { VM } from '@ethereumjs/vm';
 
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
 const bigIntStrToHex = (n: string) => '0x' + BigInt(n).toString(16);
-
-
 
 export class VerifiedProvider {
   web3: Web3;
   common: Common;
   public isSynced: boolean = false;
   public stateRoot: string | null = null;
-  public blockNumber: number | null =  null;
+  public blockNumber: number | null = null;
 
-  constructor(
-    providerURL: string
-  ) {
+  constructor(providerURL: string) {
     this.web3 = new Web3(providerURL);
     this.common = new Common({
       chain: Chain.Mainnet,
@@ -43,36 +44,42 @@ export class VerifiedProvider {
   }
 
   async sync() {
-    this.stateRoot = '0x818fbece206e5cb57d213229412f00f74c8fddcfff1003d136e2080710d33833';
+    this.stateRoot =
+      '0x818fbece206e5cb57d213229412f00f74c8fddcfff1003d136e2080710d33833';
     this.blockNumber = 15070720;
     this.isSynced = true;
     console.log(`Provider synced`);
   }
 
   async getBalance(address: Address, blockNumber: BlockNumber) {
-    const proof = await this.getProof(address, [], blockNumber);
+    // TODO: fix the state root
+    const proof = await this.getProof(address, [], blockNumber, '0x');
     return '0x' + BigInt(proof.balance).toString(16);
   }
 
   private async getVerifiedRoot(blockNumber: BlockNumber) {
-    if(blockNumber === this.blockNumber && this.stateRoot)
-        return this.stateRoot;
+    if (blockNumber === this.blockNumber && this.stateRoot)
+      return this.stateRoot;
     throw new Error('incomplete implementation');
   }
 
   async getCode(
     address: Address,
     blockNumber: BlockNumber,
-    codeHash: Bytes32
+    codeHash: Bytes32,
   ): Promise<string> {
     const code = await this.web3.eth.getCode(address, blockNumber);
-    if(!this.verifyCodeHash(code, codeHash)) {
+    if (!this.verifyCodeHash(code, codeHash)) {
       throw new Error('Invalid code or codeHash');
     }
     return code;
   }
 
-  private async getVM(tx: RpcTx, blockNumber: BlockNumber): Promise<VM> {
+  private async getVM(
+    tx: RpcTx,
+    blockNumber: BlockNumber,
+    stateRoot: Bytes32,
+  ): Promise<VM> {
     const _tx = {
       ...tx,
       from: tx.from ? tx.from : ZERO_ADDR,
@@ -83,9 +90,9 @@ export class VerifiedProvider {
       _tx,
       blockNumber,
     );
-    accessList.push({address: _tx.from, storageKeys: []});
-    if(_tx.to && !accessList.some(a => a.address.toLowerCase() === _tx.to)) {
-      accessList.push({address: _tx.to, storageKeys: []});
+    accessList.push({ address: _tx.from, storageKeys: [] });
+    if (_tx.to && !accessList.some(a => a.address.toLowerCase() === _tx.to)) {
+      accessList.push({ address: _tx.to, storageKeys: [] });
     }
 
     // TODO: based on the blocknumber get the verified state root
@@ -98,6 +105,7 @@ export class VerifiedProvider {
         access.address,
         access.storageKeys,
         blockNumber,
+        stateRoot,
       );
 
       const { nonce, balance, codeHash, storageProof: storageAccesses } = proof;
@@ -105,18 +113,22 @@ export class VerifiedProvider {
       const address = AddressEthereumJs.fromString(access.address);
 
       const account = Account.fromAccountData({
-        nonce: bigIntStrToHex(nonce),
-        balance: bigIntStrToHex(balance),
+        nonce: BigInt(nonce),
+        balance: BigInt(balance),
         codeHash,
       });
 
       await vm.stateManager.putAccount(address, account);
 
       for (let storageAccess of storageAccesses) {
-        await vm.stateManager.putContractStorage(address, setLengthLeft(toBuffer(storageAccess.key), 32), setLengthLeft(toBuffer(storageAccess.value), 32));
+        await vm.stateManager.putContractStorage(
+          address,
+          setLengthLeft(toBuffer(storageAccess.key), 32),
+          setLengthLeft(toBuffer(storageAccess.value), 32),
+        );
       }
 
-      if(code !== '0x')
+      if (code !== '0x')
         await vm.stateManager.putContractCode(address, toBuffer(code));
     }
     await vm.stateManager.commit();
@@ -141,15 +153,20 @@ export class VerifiedProvider {
         timestamp: BigInt(blockInfo.timestamp),
         difficulty: BigInt(blockInfo.difficulty.toString()),
         gasLimit: BigInt(blockInfo.gasLimit),
-        baseFeePerGas: BigInt(blockInfo.baseFeePerGas!)
-      }
+        baseFeePerGas: BigInt(blockInfo.baseFeePerGas!),
+        stateRoot: blockInfo.stateRoot,
+      },
     };
-  } 
+  }
 
   async call(transaction: RpcTx, blockNumber: BlockNumber) {
-    const vm = await this.getVM(transaction, blockNumber);
     const block = await this.getVMBlock(blockNumber);
-    const { from, to, gas: gasLimit, gasPrice, value, data } = transaction
+    const vm = await this.getVM(
+      transaction,
+      blockNumber,
+      block.header.stateRoot,
+    );
+    const { from, to, gas: gasLimit, gasPrice, value, data } = transaction;
     try {
       const runCallOpts = {
         caller: isTruthy(from) ? AddressEthereumJs.fromString(from) : undefined,
@@ -158,15 +175,15 @@ export class VerifiedProvider {
         gasPrice: toType(gasPrice, TypeOutput.BigInt),
         value: toType(value, TypeOutput.BigInt),
         data: isTruthy(data) ? toBuffer(data) : undefined,
-        block
-      }
-      const { execResult } = await vm.evm.runCall(runCallOpts)
-      return bufferToHex(execResult.returnValue)
+        block,
+      };
+      const { execResult } = await vm.evm.runCall(runCallOpts);
+      return bufferToHex(execResult.returnValue);
     } catch (error: any) {
       throw {
         code: INTERNAL_ERROR,
         message: error.message.toString(),
-      }
+      };
     }
   }
 
@@ -174,43 +191,66 @@ export class VerifiedProvider {
     address: Address,
     storageKeys: Bytes32[],
     blockNumber: BlockNumber,
+    stateRoot: Bytes32,
   ): Promise<GetProof> {
-    const proof = await this.web3.eth.getProof(address, storageKeys, blockNumber);
+    const proof = await this.web3.eth.getProof(
+      address,
+      storageKeys,
+      blockNumber,
+    );
     // TODO: fix me
     // const stateRoot = await this.getVerifiedRoot(blockNumber);
-    // const isCorrect = await this.verifyProof(address, stateRoot, proof);
+    const isCorrect = await this.verifyProof(address, stateRoot, proof);
     // TODO: if proof fails uses some other RPC?
-    // if (!isCorrect) throw new Error('Invalid RPC Proof');
+    if (!isCorrect) throw new Error('Invalid RPC Proof');
     return proof;
   }
 
   private verifyCodeHash(code: Bytes, codeHash: Bytes32): boolean {
-    return (code === '0x' && codeHash === EMPTY_ACCOUNT_EXTCODEHASH) || 
-            Web3.utils.keccak256(code) === codeHash;
+    return (
+      (code === '0x' && codeHash === EMPTY_ACCOUNT_EXTCODEHASH) ||
+      Web3.utils.keccak256(code) === codeHash
+    );
   }
 
-  // Only verifies the account proof
-  // TODO: add verification for state proof
-  // private async verifyProof(
-  //   address: Address,
-  //   stateRoot: string,
-  //   proof: GetProof,
-  // ): Promise<boolean> {
-  //   const valueRaw = {
-  //     nonce: parseInt(proof.nonce),
-  //     balance: '0x' + BigInt(proof.balance).toString(16),
-  //     storageHash: proof.storageHash,
-  //     codeHash: proof.codeHash,
-  //   };
-  //   const value = rlp.encode(Object.values(valueRaw));
-  //   const key = Web3.utils.keccak256(address);
+  private async verifyProof(
+    address: Address,
+    stateRoot: string,
+    proof: GetProof,
+  ): Promise<boolean> {
+    const trie = new Trie();
+    const key = Web3.utils.keccak256(address);
+    const expectedAccountRLP = await trie.verifyProof(
+      toBuffer(stateRoot),
+      toBuffer(key),
+      proof.accountProof.map(a => toBuffer(a)),
+    );
+    const account = Account.fromAccountData({
+      nonce: BigInt(proof.nonce),
+      balance: BigInt(proof.balance),
+      stateRoot: proof.storageHash,
+      codeHash: proof.codeHash,
+    });
+    const isAccountValid =
+      !!expectedAccountRLP && expectedAccountRLP.equals(account.serialize());
+    if (!isAccountValid) return false;
 
-  //   const valueProof = await Trie.verifyProof(
-  //     toBuffer(stateRoot),
-  //     toBuffer(key),
-  //     proof.accountProof.map(a => toBuffer(a)),
-  //   );
+    for (const sp of proof.storageProof) {
+      const key = Web3.utils.keccak256(
+        bufferToHex(setLengthLeft(toBuffer(sp.key), 32)),
+      );
+      const expectedStorageRLP = await trie.verifyProof(
+        toBuffer(proof.storageHash),
+        toBuffer(key),
+        sp.proof.map(a => toBuffer(a)),
+      );
+      const isStorageValid =
+        (!expectedStorageRLP && sp.value === '0x0') ||
+        (!!expectedStorageRLP &&
+          expectedStorageRLP.equals(rlp.encode(sp.value)));
+      if (!isStorageValid) return false;
+    }
 
-  //   return !!valueProof && valueProof.equals(value);
-  // }
+    return true;
+  }
 }

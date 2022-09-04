@@ -18,8 +18,12 @@ async function main() {
   const web3 = new Web3(RPC_URL);
   const blockTag = await web3.eth.getBlockNumber();
   try {
+    console.time('TruestedProvider Time')
     const expectedRes = await web3.eth.call(Tx, blockTag);
+    console.timeEnd('TruestedProvider Time')
+    console.time('VerifiedProvider Time')
     const res = await provider.call(Tx, blockTag);
+    console.timeEnd('VerifiedProvider Time')
     console.log(expectedRes, res);
     console.log(expectedRes === res);
   } catch(e) {
