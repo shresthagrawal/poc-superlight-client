@@ -39,6 +39,7 @@
     "@chainsafe/lodestar-light-client": "0.34.0",
     "@chainsafe/lodestar-types": "0.34.0",
     "@chainsafe/ssz": "0.9.1",
+    "@ethereumjs/block": "4.0.0-beta.3",
     "@ethereumjs/common": "3.0.0-beta.3",
     "@ethereumjs/trie": "5.0.0-beta.3",
     "@ethereumjs/util": "8.0.0-beta.3",

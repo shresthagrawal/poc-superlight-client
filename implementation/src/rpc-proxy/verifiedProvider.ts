@@ -36,8 +36,10 @@ import {
   INTERNAL_ERROR,
   REQUEST_BATCH_SIZE,
   EMPTY_ACCOUNT_EXTCODEHASH,
+  MAX_BLOCK_HISTORY
 } from './constants';
 import { VM } from '@ethereumjs/vm';
+import { BlockHeader } from '@ethereumjs/block';
 import chunk from 'lodash.chunk';
 import flatten from 'lodash.flatten';
 
@@ -47,9 +49,11 @@ const bigIntStrToHex = (n: string) => '0x' + BigInt(n).toString(16);
 export class VerifiedProvider {
   web3: Web3;
   common: Common;
-  public isSynced: boolean = false;
-  public stateRoot: string | null = null;
-  public blockNumber: number | null = null;
+
+  private blockHashes: {[blockNumber: number]: Bytes32} = {};
+  private blockHeaders: {[blockHash: string]: BlockHeader} = {};
+  private latestBlockNumber: number;
+  private oldestBlockNumber: number;
 
   private requestTypeToMethod: Record<Request['type'], (request: Request, callback: RequestMethodCallback) => Method> = {
     // Type errors ignored due to https://github.com/ChainSafe/web3.js/issues/4655
@@ -69,21 +73,18 @@ export class VerifiedProvider {
   }
 
   constructor(
-    providerURL: string
+    providerURL: string,
+    blockNumber: number,
+    blockHash: Bytes32, 
   ) {
     this.web3 = new Web3(providerURL);
     this.common = new Common({
       chain: Chain.Mainnet,
       hardfork: Hardfork.ArrowGlacier,
     });
-  }
-
-  async sync() {
-    this.stateRoot =
-      '0x818fbece206e5cb57d213229412f00f74c8fddcfff1003d136e2080710d33833';
-    this.blockNumber = 15070720;
-    this.isSynced = true;
-    console.log(`Provider synced`);
+    this.latestBlockNumber = blockNumber;
+    this.oldestBlockNumber = blockNumber;
+    this.blockHashes[blockNumber] = blockHash;
   }
 
   async getBalance(address: Address, blockNumber: BlockNumber) {
@@ -91,12 +92,6 @@ export class VerifiedProvider {
     //       2. create a request to get account
     //       3. verify the account proof and return the balance
     return '0x0';
-  }
-
-  private async getVerifiedRoot(blockNumber: BlockNumber) {
-    if (blockNumber === this.blockNumber && this.stateRoot)
-      return this.stateRoot;
-    throw new Error('incomplete implementation');
   }
 
   private constructRequestMethod(request: Request, callback: (error: Error, data: Response) => void): Method {
@@ -204,36 +199,66 @@ export class VerifiedProvider {
     return vm;
   }
 
-  async getBlock(blockNumber: BlockNumber) {
-    // TODO check the correctness of blockInfo
-    const blockInfo = await this.web3.eth.getBlock(blockNumber);
-    return blockInfo;
+  private async getBlockHash(blockNumber: BlockNumber) {
+    // TODO: handle cases like 'pending', 'finalized'
+    if(blockNumber === 'latest') {
+      return this.blockHashes[this.latestBlockNumber];
+    } else {
+      const _blockNumber = parseInt(blockNumber.toString());
+      if(_blockNumber > this.latestBlockNumber)
+        throw new Error('BlockNumber requested cannot be in future');
+
+      if(_blockNumber + MAX_BLOCK_HISTORY < this.latestBlockNumber)
+        throw new Error(`BlockNumber requested cannot be older than ${MAX_BLOCK_HISTORY}blocks`);
+
+      while(this.oldestBlockNumber > _blockNumber) {
+        const hash = this.blockHashes[this.oldestBlockNumber]
+        const header = await this.getBlockHeaderByHash(hash);
+        this.oldestBlockNumber-= 1;
+        this.blockHashes[this.oldestBlockNumber] = bufferToHex(header.parentHash);
+      }
+
+      return this.blockHashes[_blockNumber];
+    }
   }
 
-  private async getVMBlock(blockNumber: BlockNumber) {
-    const blockInfo = await this.getBlock(blockNumber);
-    // TODO: fix cliqueSigner and prevRandao
-    return {
-      header: {
-        number: BigInt(blockInfo.number),
-        cliqueSigner: () => AddressEthereumJs.zero(),
-        prevRandao: zeros(32),
-        coinbase: AddressEthereumJs.fromString(blockInfo.miner),
-        timestamp: BigInt(blockInfo.timestamp),
-        difficulty: BigInt(blockInfo.difficulty.toString()),
-        gasLimit: BigInt(blockInfo.gasLimit),
-        baseFeePerGas: BigInt(blockInfo.baseFeePerGas!),
+  private async getBlockHeaderByHash(blockHash: Bytes32) {
+    if(!this.blockHeaders[blockHash]) {
+      const blockInfo = await this.web3.eth.getBlock(blockHash);
+      const header = BlockHeader.fromHeaderData({
+        parentHash: blockInfo.parentHash,
+        uncleHash: blockInfo.sha3Uncles,
+        coinbase: blockInfo.miner,
         stateRoot: blockInfo.stateRoot,
-      },
-    };
+        transactionsTrie: blockInfo.transactionsRoot,
+        receiptTrie: blockInfo.receiptsRoot,
+        logsBloom: blockInfo.logsBloom,
+        difficulty: BigInt(blockInfo.difficulty),
+        number: BigInt(blockInfo.number),
+        gasLimit: BigInt(blockInfo.gasLimit),
+        gasUsed: BigInt(blockInfo.gasUsed),
+        timestamp: BigInt(blockInfo.timestamp),
+        extraData: blockInfo.extraData,
+        mixHash: (blockInfo as any).mixHash, // some reason the types are not up to date :( 
+        nonce: blockInfo.nonce,
+        baseFeePerGas: BigInt(blockInfo.baseFeePerGas!)
+      });
+      if(!header.hash().equals(toBuffer(blockHash))) {
+        throw new Error('Invalid block or blockHash');
+      }
+      this.blockHeaders[blockHash] = header;
+    }
+    return this.blockHeaders[blockHash];
   }
+
 
   async call(transaction: RpcTx, blockNumber: BlockNumber) {
-    const block = await this.getVMBlock(blockNumber);
+    const hash = await this.getBlockHash(blockNumber);
+    const header = await this.getBlockHeaderByHash(hash);
     const vm = await this.getVM(
       transaction,
       blockNumber,
-      block.header.stateRoot,
+      bufferToHex(header.stateRoot),
     );
     const { from, to, gas: gasLimit, gasPrice, value, data } = transaction;
     try {
@@ -244,7 +269,7 @@ export class VerifiedProvider {
         gasPrice: toType(gasPrice, TypeOutput.BigInt),
         value: toType(value, TypeOutput.BigInt),
         data: isTruthy(data) ? toBuffer(data) : undefined,
-        block,
+        block: { header },
       };
       const { execResult } = await vm.evm.runCall(runCallOpts);
       return bufferToHex(execResult.returnValue);

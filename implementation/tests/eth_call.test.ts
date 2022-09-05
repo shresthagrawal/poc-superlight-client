@@ -14,15 +14,17 @@ const Tx = {
 };
 
 async function main() {
-  const provider = new VerifiedProvider(RPC_URL);
   const web3 = new Web3(RPC_URL);
-  const blockTag = await web3.eth.getBlockNumber();
+  const currentblockNumber = await web3.eth.getBlockNumber();
+  const block = await web3.eth.getBlock(currentblockNumber);
+  const provider = new VerifiedProvider(RPC_URL, currentblockNumber, block.hash);
+  const blockNumber = currentblockNumber - 5; // to test the rolling back feature
   try {
     console.time('TruestedProvider Time')
-    const expectedRes = await web3.eth.call(Tx, blockTag);
+    const expectedRes = await web3.eth.call(Tx, blockNumber);
     console.timeEnd('TruestedProvider Time')
     console.time('VerifiedProvider Time')
-    const res = await provider.call(Tx, blockTag);
+    const res = await provider.call(Tx, blockNumber);
     console.timeEnd('VerifiedProvider Time')
     console.log(expectedRes, res);
     console.log(expectedRes === res);

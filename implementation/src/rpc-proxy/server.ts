@@ -11,8 +11,8 @@ const RPC_URL = process.env.RPC_URL || '';
 function getApp() {
     const server = new JSONRPCServer();
     const app = express();
-    const provider = new VerifiedProvider(RPC_URL);
-    provider.sync();
+    // TODO: fix the blockNumber and blockHash
+    const provider = new VerifiedProvider(RPC_URL, 0, '');
 
     server.addMethod('eth_getBalance', async ([address, blockNumber]: [string, string]) => {
         try {
