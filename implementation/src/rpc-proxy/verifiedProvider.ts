@@ -110,6 +110,30 @@ export class VerifiedProvider {
     return this.web3.utils.numberToHex(this.chainId);
   }
 
+  async getCode(address: Address, blockNumber: BlockNumber): Promise<HexString> {
+    // TODO: fixme
+    const tempBlockNumber = blockNumber === 'latest' ? this.latestBlockNumber : blockNumber;
+    const stateRoot = await this.getStateRoot(tempBlockNumber);
+    const [accountProof, code] = await this.fetchRequests([
+      {
+        type: 'account',
+        blockNumber,
+        storageSlots: [],
+        address,
+      },
+      {
+        type: 'code',
+        blockNumber,
+        address,
+      },
+    ]) as [AccountResponse, CodeResponse];
+    const isAccountCorrect = await this.verifyProof(address, stateRoot, accountProof);
+    const isCodeCorrect = await this.verifyCodeHash(code, accountProof.codeHash);
+    // TODO: if proof fails uses some other RPC?
+    if (!isAccountCorrect || !isCodeCorrect) throw new Error('Invalid RPC proof');
+    return code;
+  }
+
   async getTransactionCount(address: Address, blockNumber: BlockNumber): Promise<HexString> {
     // TODO: fixme
     const tempBlockNumber = blockNumber === 'latest' ? this.latestBlockNumber : blockNumber;

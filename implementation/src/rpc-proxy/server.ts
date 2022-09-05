@@ -38,6 +38,10 @@ async function getApp() {
         return await provider.getTransactionCount(address, blockNumber);
     });
 
+    server.addMethod('eth_getCode', async ([address, blockNumber]: [string, string]) => {
+        return await provider.getCode(address, blockNumber);
+    });
+
     const exceptionMiddleware: JSONRPCServerMiddleware<void> = async (next, request, serverParams) => {
         try {
             return await next(request, serverParams);
