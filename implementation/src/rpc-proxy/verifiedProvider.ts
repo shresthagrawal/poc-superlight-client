@@ -88,7 +88,8 @@ export class VerifiedProvider {
   }
 
   async getBalance(address: Address, blockNumber: BlockNumber) {
-    // TODO: 1. get the state root from blockNumber
+    const stateRoot = this.getStateRoot(blockNumber);
+    // TODO:
     //       2. create a request to get account
     //       3. verify the account proof and return the balance
     return '0x0';
@@ -220,6 +221,12 @@ export class VerifiedProvider {
 
       return this.blockHashes[_blockNumber];
     }
+  }
+
+  private async getStateRoot(blockNumber: BlockNumber) {
+    const hash = await this.getBlockHash(blockNumber);
+    const header = await this.getBlockHeaderByHash(hash);
+    return bufferToHex(header.stateRoot);
   }
 
   private async getBlockHeaderByHash(blockHash: Bytes32) {
