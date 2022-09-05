@@ -1,7 +1,4 @@
 import Web3 from 'web3';
-import { GetProof } from 'web3-eth';
-import { BlockNumber } from 'web3-core';
-import { Method } from 'web3-core-method';
 import { Trie } from '@ethereumjs/trie';
 import rlp from 'rlp';
 import { fromHexString } from '@chainsafe/ssz';
@@ -28,7 +25,12 @@ import {
   AccountResponse,
   CodeResponse,
   RequestMethodCallback,
-  Bytes
+  Bytes,
+  ChainId,
+  GetProof,
+  BlockNumber,
+  Method,
+  HexString
 } from './types';
 import {
   ZERO_ADDR,
@@ -54,6 +56,7 @@ export class VerifiedProvider {
   private blockHeaders: {[blockHash: string]: BlockHeader} = {};
   private latestBlockNumber: number;
   private oldestBlockNumber: number;
+  public chainId: number;
 
   private requestTypeToMethod: Record<Request['type'], (request: Request, callback: RequestMethodCallback) => Method> = {
     // Type errors ignored due to https://github.com/ChainSafe/web3.js/issues/4655
@@ -77,11 +80,14 @@ export class VerifiedProvider {
     blockNumber: number,
     blockHash: Bytes32, 
   ) {
-    this.web3 = new Web3(providerURL);
+    this.web3 = new Web3(new Web3.providers.HttpProvider(providerURL, {
+      keepAlive: true,
+    }));
     this.common = new Common({
       chain: Chain.Mainnet,
       hardfork: Hardfork.ArrowGlacier,
     });
+    this.chainId = Number(this.common.chainId());
     this.latestBlockNumber = blockNumber;
     this.oldestBlockNumber = blockNumber;
     this.blockHashes[blockNumber] = blockHash;
@@ -93,6 +99,30 @@ export class VerifiedProvider {
     //       2. create a request to get account
     //       3. verify the account proof and return the balance
     return '0x0';
+  }
+
+  async getBlockNumber(): Promise<HexString> {
+    return this.web3.utils.numberToHex(this.latestBlockNumber);
+  }
+
+  async getChainId(): Promise<HexString> {
+    return this.web3.utils.numberToHex(this.chainId);
+  }
+
+  async getTransactionCount(address: Address, blockNumber: BlockNumber): Promise<HexString> {
+    // TODO: fixme
+    const tempBlockNumber = blockNumber === 'latest' ? this.latestBlockNumber : blockNumber;
+    const stateRoot = await this.getStateRoot(tempBlockNumber);
+    // TODO: use fetchRequest() instead
+    const proof = await this.web3.eth.getProof(
+      address,
+      [],
+      tempBlockNumber
+    );
+    const isAccountCorrect = await this.verifyProof(address, stateRoot, proof);
+    // TODO: if proof fails uses some other RPC?
+    if (!isAccountCorrect) throw new Error('Invalid RPC proof');
+    return proof.nonce;
   }
 
   private constructRequestMethod(request: Request, callback: (error: Error, data: Response) => void): Method {
@@ -248,7 +278,7 @@ export class VerifiedProvider {
         extraData: blockInfo.extraData,
         mixHash: (blockInfo as any).mixHash, // some reason the types are not up to date :( 
         nonce: blockInfo.nonce,
-        baseFeePerGas: BigInt(blockInfo.baseFeePerGas!)
+        baseFeePerGas: blockInfo.baseFeePerGas ? BigInt(blockInfo.baseFeePerGas): undefined
       });
       if(!header.hash().equals(toBuffer(blockHash))) {
         throw new Error('Invalid block or blockHash');
