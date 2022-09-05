@@ -175,7 +175,7 @@ export class VerifiedProvider {
       const isAccountCorrect = await this.verifyProof(accountProof.address, stateRoot, accountProof);
       const isCodeCorrect = await this.verifyCodeHash(code, codeHash);
       // TODO: if proof fails uses some other RPC?
-      if (!accountProof.address || !isCodeCorrect) throw new Error('Invalid RPC proof');
+      if (!isAccountCorrect || !isCodeCorrect) throw new Error('Invalid RPC proof');
 
       const account = Account.fromAccountData({
         nonce: BigInt(nonce),
