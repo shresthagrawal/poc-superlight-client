@@ -42,6 +42,7 @@ import {
 } from './constants';
 import { VM } from '@ethereumjs/vm';
 import { BlockHeader } from '@ethereumjs/block';
+import { Blockchain } from '@ethereumjs/blockchain';
 import chunk from 'lodash.chunk';
 import flatten from 'lodash.flatten';
 
@@ -174,7 +175,15 @@ export class VerifiedProvider {
     }
 
     // TODO: based on the blocknumber get the verified state root
-    const vm = await VM.create({ common: this.common });
+    const blockchain = await Blockchain.create({ common: this.common });
+    // path the blockchain to return the correct blockhash
+    (blockchain as any).getBlock = async (blockId: number) => { 
+      const _hash = toBuffer(await this.getBlockHash(blockId));
+      return {
+        hash: () => _hash
+      }
+    };
+    const vm = await VM.create({ common: this.common, blockchain });
 
     await vm.stateManager.checkpoint();
 
