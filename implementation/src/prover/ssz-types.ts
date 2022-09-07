@@ -1,4 +1,3 @@
-import * as _ from 'lodash';
 import {
   ContainerType,
   VectorCompositeType,
@@ -7,6 +6,7 @@ import {
   UintNumberType,
   ListCompositeType,
 } from '@chainsafe/ssz';
+import { deepTypecast } from '../utils';
 
 // these params can be adjusted
 const MAX_DEPT = 1000;
@@ -41,20 +41,6 @@ export const NodeSSZ = new ContainerType({
   children: ChildrenSSZ,
 });
 export const LeafHashesSSZ = new ListCompositeType(HashSSZ, MAX_CHAINSIZE);
-
-function deepTypecast<T>(
-  obj: any,
-  checker: (val: any) => boolean,
-  caster: (val: T) => any,
-): any {
-  return _.forEach(obj, (val: any, key: any, obj: any) => {
-    obj[key] = checker(val)
-      ? caster(val)
-      : _.isObject(val)
-      ? deepTypecast(val, checker, caster)
-      : val;
-  });
-}
 
 export const deepBufferToUint8Array = (obj: any) =>
   deepTypecast(

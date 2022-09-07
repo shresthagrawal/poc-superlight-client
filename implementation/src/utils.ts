@@ -7,6 +7,7 @@ import Decimal from 'decimal.js';
 import { toHexString, fromHexString } from '@chainsafe/ssz';
 import { SecretKey } from '@chainsafe/bls';
 import seedrandom from 'seedrandom';
+import * as _ from 'lodash';
 
 export function logFloor(x: number, base: number = 2) {
   return Decimal.log(x, base).floor().toNumber();
@@ -157,5 +158,19 @@ export async function handleHTTPSRequest(
     });
 
     req.end();
+  });
+}
+
+export function deepTypecast<T>(
+  obj: any,
+  checker: (val: any) => boolean,
+  caster: (val: T) => any,
+): any {
+  return _.forEach(obj, (val: any, key: any, obj: any) => {
+    obj[key] = checker(val)
+      ? caster(val)
+      : _.isObject(val)
+      ? deepTypecast(val, checker, caster)
+      : val;
   });
 }

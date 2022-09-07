@@ -1,10 +1,13 @@
+import http from 'http';
+import chunk from 'lodash.chunk';
+import flatten from 'lodash.flatten';
 import Web3 from 'web3';
 import { Trie } from '@ethereumjs/trie';
 import rlp from 'rlp';
 import { fromHexString } from '@chainsafe/ssz';
 import { Common, Chain, Hardfork } from '@ethereumjs/common';
 import {
-  Address as AddressEthereumJs,
+  Address,
   Account,
   toType,
   bufferToHex,
@@ -13,11 +16,16 @@ import {
   setLengthLeft,
   zeros,
   isTruthy,
+  isFalsy,
 } from '@ethereumjs/util';
+import { VM } from '@ethereumjs/vm';
+import { BlockHeader, Block } from '@ethereumjs/block';
+import { Blockchain } from '@ethereumjs/blockchain';
+import { Transaction } from '@ethereumjs/tx';
 import {
-  Address,
+  AddressHex,
   Bytes32,
-  RpcTx,
+  RPCTx,
   Request,
   AccountRequest,
   CodeRequest,
@@ -28,135 +36,342 @@ import {
   Bytes,
   ChainId,
   GetProof,
-  BlockNumber,
+  BlockNumber as BlockOpt,
   Method,
-  HexString
+  HexString,
 } from './types';
 import {
   ZERO_ADDR,
   GAS_LIMIT,
-  INTERNAL_ERROR,
   REQUEST_BATCH_SIZE,
   EMPTY_ACCOUNT_EXTCODEHASH,
-  MAX_BLOCK_HISTORY
+  MAX_BLOCK_HISTORY,
+  INTERNAL_ERROR,
+  INVALID_PARAMS,
+  MAX_SOCKET
 } from './constants';
-import { VM } from '@ethereumjs/vm';
-import { BlockHeader } from '@ethereumjs/block';
-import { Blockchain } from '@ethereumjs/blockchain';
-import chunk from 'lodash.chunk';
-import flatten from 'lodash.flatten';
+import {
+  headerDataFromWeb3Response,
+  blockDataFromWeb3Response,
+  toJSONRPCBlock,
+} from './utils';
 
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
-const bigIntStrToHex = (n: string) => '0x' + BigInt(n).toString(16);
+const bigIntToHex = (n: string | bigint): string =>
+  '0x' + BigInt(n).toString(16);
 
+// TODO: handle fallback if RPC fails
+// TODO: if anything is accessed outside the accesslist the provider
+// should throw error
 export class VerifiedProvider {
   web3: Web3;
   common: Common;
 
-  private blockHashes: {[blockNumber: number]: Bytes32} = {};
-  private blockHeaders: {[blockHash: string]: BlockHeader} = {};
-  private latestBlockNumber: number;
-  private oldestBlockNumber: number;
-  public chainId: number;
+  private blockHashes: { [blockNumberHex: string]: Bytes32 } = {};
+  private blockHeaders: { [blockHash: string]: BlockHeader } = {};
+  private latestBlockNumber: bigint;
+  private oldestBlockNumber: bigint;
 
-  private requestTypeToMethod: Record<Request['type'], (request: Request, callback: RequestMethodCallback) => Method> = {
+  private requestTypeToMethod: Record<
+    Request['type'],
+    (request: Request, callback: RequestMethodCallback) => Method
+  > = {
     // Type errors ignored due to https://github.com/ChainSafe/web3.js/issues/4655
-    // @ts-ignore
-    'account': (request: AccountRequest, callback) => this.web3.eth.getProof.request(
-      request.address,
-      request.storageSlots,
-      request.blockNumber,
-      callback
-    ),
-    // @ts-ignore
-    'code': (request: CodeRequest, callback) => this.web3.eth.getCode.request(
-      request.address,
-      request.blockNumber,
-      callback
-    ),
-  }
+    account: (request: AccountRequest, callback) =>
+      // @ts-ignore
+      this.web3.eth.getProof.request(
+        request.addressHex,
+        request.storageSlots,
+        bigIntToHex(request.blockNumber),
+        callback,
+      ),
+    code: (request: CodeRequest, callback) =>
+      // @ts-ignore
+      this.web3.eth.getCode.request(
+        request.addressHex,
+        bigIntToHex(request.blockNumber),
+        callback,
+      ),
+  };
 
   constructor(
     providerURL: string,
-    blockNumber: number,
-    blockHash: Bytes32, 
+    blockNumber: bigint | number,
+    blockHash: Bytes32,
   ) {
-    this.web3 = new Web3(new Web3.providers.HttpProvider(providerURL, {
-      keepAlive: true,
-    }));
+    this.web3 = new Web3(
+      new Web3.providers.HttpProvider(providerURL, {
+        keepAlive: true,
+        agent: { http: new http.Agent({ keepAlive: true, maxSockets: MAX_SOCKET}) }
+      }),
+    );
     this.common = new Common({
       chain: Chain.Mainnet,
       hardfork: Hardfork.ArrowGlacier,
     });
-    this.chainId = Number(this.common.chainId());
-    this.latestBlockNumber = blockNumber;
-    this.oldestBlockNumber = blockNumber;
-    this.blockHashes[blockNumber] = blockHash;
+    const _blockNumber = BigInt(blockNumber);
+    this.latestBlockNumber = _blockNumber;
+    this.oldestBlockNumber = _blockNumber;
+    this.blockHashes[bigIntToHex(_blockNumber)] = blockHash;
   }
 
-  async getBalance(address: Address, blockNumber: BlockNumber) {
-    const stateRoot = this.getStateRoot(blockNumber);
-    // TODO:
-    //       2. create a request to get account
-    //       3. verify the account proof and return the balance
-    return '0x0';
+  async getBalance(addressHex: AddressHex, blockOpt: BlockOpt) {
+    const header = await this.getBlockHeader(blockOpt);
+    const address = Address.fromString(addressHex);
+    const proof = await this.web3.eth.getProof(
+      addressHex,
+      [],
+      bigIntToHex(header.number),
+    );
+    const isAccountCorrect = await this.verifyProof(
+      address,
+      [],
+      header.stateRoot,
+      proof,
+    );
+    if (!isAccountCorrect) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `invalid account proof provided by the RPC`,
+      };
+    }
+
+    return this.web3.utils.numberToHex(proof.balance);
   }
 
-  async getBlockNumber(): Promise<HexString> {
-    return this.web3.utils.numberToHex(this.latestBlockNumber);
+  async blockNumber(): Promise<HexString> {
+    return bigIntToHex(this.latestBlockNumber);
   }
 
-  async getChainId(): Promise<HexString> {
-    return this.web3.utils.numberToHex(this.chainId);
+  async chainId(): Promise<HexString> {
+    return bigIntToHex(this.common.chainId());
   }
 
-  async getCode(address: Address, blockNumber: BlockNumber): Promise<HexString> {
-    // TODO: fixme
-    const tempBlockNumber = blockNumber === 'latest' ? this.latestBlockNumber : blockNumber;
-    const stateRoot = await this.getStateRoot(tempBlockNumber);
-    const [accountProof, code] = await this.fetchRequests([
+  async getCode(
+    addressHex: AddressHex,
+    blockOpt: BlockOpt,
+  ): Promise<HexString> {
+    const header = await this.getBlockHeader(blockOpt);
+    const [accountProof, code] = (await this.fetchRequests([
       {
         type: 'account',
-        blockNumber,
+        blockNumber: header.number,
         storageSlots: [],
-        address,
+        addressHex,
       },
       {
         type: 'code',
-        blockNumber,
-        address,
+        blockNumber: header.number,
+        addressHex,
       },
-    ]) as [AccountResponse, CodeResponse];
-    const isAccountCorrect = await this.verifyProof(address, stateRoot, accountProof);
-    const isCodeCorrect = await this.verifyCodeHash(code, accountProof.codeHash);
-    // TODO: if proof fails uses some other RPC?
-    if (!isAccountCorrect || !isCodeCorrect) throw new Error('Invalid RPC proof');
+    ])) as [AccountResponse, CodeResponse];
+
+    const address = Address.fromString(addressHex);
+    const isAccountCorrect = await this.verifyProof(
+      address,
+      [],
+      header.stateRoot,
+      accountProof,
+    );
+    if (!isAccountCorrect) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `invalid account proof provided by the RPC`,
+      };
+    }
+
+    const isCodeCorrect = await this.verifyCodeHash(
+      code,
+      accountProof.codeHash,
+    );
+    if (!isCodeCorrect) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `code privided by the RPC doesn't match the account's codeHash`,
+      };
+    }
+
     return code;
   }
 
-  async getTransactionCount(address: Address, blockNumber: BlockNumber): Promise<HexString> {
-    // TODO: fixme
-    const tempBlockNumber = blockNumber === 'latest' ? this.latestBlockNumber : blockNumber;
-    const stateRoot = await this.getStateRoot(tempBlockNumber);
-    // TODO: use fetchRequest() instead
+  async getTransactionCount(
+    addressHex: AddressHex,
+    blockOpt: BlockOpt,
+  ): Promise<HexString> {
+    const header = await this.getBlockHeader(blockOpt);
+    const address = Address.fromString(addressHex);
     const proof = await this.web3.eth.getProof(
+      addressHex,
+      [],
+      bigIntToHex(header.number),
+    );
+
+    const isAccountCorrect = await this.verifyProof(
       address,
       [],
-      tempBlockNumber
+      header.stateRoot,
+      proof,
     );
-    const isAccountCorrect = await this.verifyProof(address, stateRoot, proof);
-    // TODO: if proof fails uses some other RPC?
-    if (!isAccountCorrect) throw new Error('Invalid RPC proof');
-    return proof.nonce;
+    if (!isAccountCorrect) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `invalid account proof provided by the RPC`,
+      };
+    }
+
+    return bigIntToHex(proof.nonce.toString());
   }
 
-  private constructRequestMethod(request: Request, callback: (error: Error, data: Response) => void): Method {
+  async call(transaction: RPCTx, blockOpt: BlockOpt) {
+    const header = await this.getBlockHeader(blockOpt);
+    const vm = await this.getVM(transaction, header.number, header.stateRoot);
+    const { from, to, gas: gasLimit, gasPrice, value, data } = transaction;
+    try {
+      const runCallOpts = {
+        caller: isTruthy(from) ? Address.fromString(from) : undefined,
+        to: isTruthy(to) ? Address.fromString(to) : undefined,
+        gasLimit: toType(gasLimit, TypeOutput.BigInt),
+        gasPrice: toType(gasPrice, TypeOutput.BigInt),
+        value: toType(value, TypeOutput.BigInt),
+        data: isTruthy(data) ? toBuffer(data) : undefined,
+        block: { header },
+      };
+      const { execResult } = await vm.evm.runCall(runCallOpts);
+      return bufferToHex(execResult.returnValue);
+    } catch (error: any) {
+      throw {
+        code: INTERNAL_ERROR,
+        message: error.message.toString(),
+      };
+    }
+  }
+
+  async estimateGas(transaction: RPCTx, blockOpt: BlockOpt) {
+    const header = await this.getBlockHeader(blockOpt);
+    if (isFalsy(transaction.gas)) {
+      // If no gas limit is specified use the last block gas limit as an upper bound.
+      transaction.gas = GAS_LIMIT;
+    }
+    const txData = { ...transaction, gasLimit: transaction.gas };
+    const tx = Transaction.fromTxData(txData, {
+      common: this.common,
+      freeze: false,
+    });
+
+    const vm = await this.getVM(transaction, header.number, header.stateRoot);
+
+    // set from address
+    const from = isTruthy(transaction.from)
+      ? Address.fromString(transaction.from)
+      : Address.zero();
+    tx.getSenderAddress = () => {
+      return from;
+    };
+
+    try {
+      const { totalGasSpent } = await vm.runTx({
+        tx,
+        skipNonce: true,
+        skipBalance: true,
+        skipBlockGasLimitValidation: true,
+      });
+      return `0x${totalGasSpent.toString(16)}`;
+    } catch (error: any) {
+      throw {
+        code: INTERNAL_ERROR,
+        message: error.message.toString(),
+      };
+    }
+  }
+
+  async getBlockByHash(blockHash: Bytes32, includeTransactions: boolean) {
+    const header = await this.getBlockHeaderByHash(blockHash);
+    return this.getJSONRPCBlock(header, includeTransactions);
+  }
+
+  async getBlockByNumber(blockOpt: BlockOpt, includeTransactions: boolean) {
+    const header = await this.getBlockHeader(blockOpt);
+    return this.getJSONRPCBlock(header, includeTransactions);
+  }
+
+  async sendRawTransaction(signedTx: string) {
+    return this.web3.eth.sendSignedTransaction(signedTx);
+  }
+
+  private async getJSONRPCBlock(header: BlockHeader, includeTransactions: boolean) {
+    const blockInfo = await this.web3.eth.getBlock(
+      parseInt(header.number.toString()),
+      true,
+    );
+    // TODO: add support for uncle headers; First fetch all the uncles
+    // add it to the blockData, verify the uncles and use it
+    const blockData = blockDataFromWeb3Response(blockInfo);
+    const block = Block.fromBlockData(blockData, { common: this.common });
+
+    if (!block.header.hash().equals(header.hash())) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `blockhash doest match the blockData provided by the RPC`,
+      };
+    }
+
+    if (!(await block.validateTransactionsTrie())) {
+      throw {
+        error: INTERNAL_ERROR,
+        message: `transactionTree doesn't match the transactions privided by the RPC`,
+      };
+    }
+
+    // TODO: fix total difficulty(TD), TD is not included in the header
+    // and there is no way to verify TD
+    return toJSONRPCBlock(block, BigInt(0), [], includeTransactions);
+  }
+
+  private async getBlockHeader(blockOpt: BlockOpt): Promise<BlockHeader> {
+    const blockNumber = this.getBlockNumberByBlockOpt(blockOpt);
+    const blockHash = await this.getBlockHash(blockNumber);
+    return this.getBlockHeaderByHash(blockHash);
+  }
+
+  private getBlockNumberByBlockOpt(blockOpt: BlockOpt): bigint {
+    // TODO: add support for blockOpts below
+    if (
+      typeof blockOpt === 'string' &&
+      ['pending', 'earliest', 'finalized', 'safe'].includes(blockOpt)
+    ) {
+      throw {
+        code: INVALID_PARAMS,
+        message: `"pending" is not yet supported`,
+      };
+    } else if (blockOpt === 'latest') {
+      return this.latestBlockNumber;
+    } else {
+      const blockNumber = BigInt(blockOpt as any);
+      if (blockNumber > this.latestBlockNumber) {
+        throw {
+          code: INVALID_PARAMS,
+          message: 'specified block greater than current height',
+        };
+      } else if (blockNumber + MAX_BLOCK_HISTORY < this.latestBlockNumber) {
+        throw {
+          code: INVALID_PARAMS,
+          message: `specified block cannot older that ${MAX_BLOCK_HISTORY}`,
+        };
+      }
+      return blockNumber;
+    }
+  }
+
+  private constructRequestMethod(
+    request: Request,
+    callback: (error: Error, data: Response) => void,
+  ): Method {
     return this.requestTypeToMethod[request.type](request, callback);
   }
 
   private async fetchRequests(requests: Request[]): Promise<Response[]> {
     const batch = new this.web3.BatchRequest();
-    const promises = requests.map((request) => {
+    const promises = requests.map(request => {
       return new Promise<Response>((resolve, reject) => {
         // Type error ignored due to https://github.com/ChainSafe/web3.js/issues/4655
         const method = this.constructRequestMethod(
@@ -164,7 +379,7 @@ export class VerifiedProvider {
           (error: Error, data: Response) => {
             if (error) reject(error);
             resolve(data);
-          }
+          },
         );
         batch.add(method);
       });
@@ -175,14 +390,20 @@ export class VerifiedProvider {
 
   private async fetchRequestsInBatches(
     requests: Request[],
-    batchSize: number
+    batchSize: number,
   ): Promise<Response[]> {
     const batchedRequests = chunk(requests, batchSize);
-    const responses = batchedRequests.map(requestBatch => this.fetchRequests(requestBatch));
+    const responses = batchedRequests.map(requestBatch =>
+      this.fetchRequests(requestBatch),
+    );
     return flatten(await Promise.all(responses));
   }
 
-  private async getVM(tx: RpcTx, blockNumber: BlockNumber, stateRoot: Bytes32): Promise<VM> {
+  private async getVM(
+    tx: RPCTx,
+    blockNumber: bigint,
+    stateRoot: Buffer,
+  ): Promise<VM> {
     const _tx = {
       ...tx,
       from: tx.from ? tx.from : ZERO_ADDR,
@@ -191,54 +412,78 @@ export class VerifiedProvider {
 
     const { accessList } = await this.web3.eth.createAccessList(
       _tx,
-      blockNumber,
+      bigIntToHex(blockNumber),
     );
     accessList.push({ address: _tx.from, storageKeys: [] });
     if (_tx.to && !accessList.some(a => a.address.toLowerCase() === _tx.to)) {
       accessList.push({ address: _tx.to, storageKeys: [] });
     }
 
-    // TODO: based on the blocknumber get the verified state root
     const blockchain = await Blockchain.create({ common: this.common });
     // path the blockchain to return the correct blockhash
-    (blockchain as any).getBlock = async (blockId: number) => { 
-      const _hash = toBuffer(await this.getBlockHash(blockId));
+    (blockchain as any).getBlock = async (blockId: number) => {
+      const _hash = toBuffer(await this.getBlockHash(BigInt(blockId)));
       return {
-        hash: () => _hash
-      }
+        hash: () => _hash,
+      };
     };
     const vm = await VM.create({ common: this.common, blockchain });
 
     await vm.stateManager.checkpoint();
 
-    const requests = flatten(accessList.map((access) => {
+    const requests = flatten(
+      accessList.map(access => {
         return [
           {
             type: 'account',
             blockNumber,
             storageSlots: access.storageKeys,
-            address: access.address,
+            addressHex: access.address,
           },
           {
             type: 'code',
             blockNumber,
-            address: access.address,
-          }, 
-        ]
-      }
-    )) as Request[];
+            addressHex: access.address,
+          },
+        ];
+      }),
+    ) as Request[];
     const responses = chunk(
-      await this.fetchRequestsInBatches(
-        requests, REQUEST_BATCH_SIZE
-    ), 2) as [AccountResponse, CodeResponse][];
+      await this.fetchRequestsInBatches(requests, REQUEST_BATCH_SIZE),
+      2,
+    ) as [AccountResponse, CodeResponse][];
 
-    for (const [accountProof, code] of responses) {
-      const { nonce, balance, codeHash, storageProof: storageAccesses } = accountProof;
-      const address = AddressEthereumJs.fromString(accountProof.address);
-      const isAccountCorrect = await this.verifyProof(accountProof.address, stateRoot, accountProof);
+    for (let i = 0; i < accessList.length; i++) {
+      const { address: addressHex, storageKeys } = accessList[i];
+      const [accountProof, code] = responses[i];
+      const {
+        nonce,
+        balance,
+        codeHash,
+        storageProof: storageAccesses,
+      } = accountProof;
+      const address = Address.fromString(addressHex);
+
+      const isAccountCorrect = await this.verifyProof(
+        address,
+        storageKeys,
+        stateRoot,
+        accountProof,
+      );
+      if (!isAccountCorrect) {
+        throw {
+          error: INTERNAL_ERROR,
+          message: `invalid account proof provided by the RPC`,
+        };
+      }
+
       const isCodeCorrect = await this.verifyCodeHash(code, codeHash);
-      // TODO: if proof fails uses some other RPC?
-      if (!isAccountCorrect || !isCodeCorrect) throw new Error('Invalid RPC proof');
+      if (!isCodeCorrect) {
+        throw {
+          error: INTERNAL_ERROR,
+          message: `code privided by the RPC doesn't match the account's codeHash`,
+        };
+      }
 
       const account = Account.fromAccountData({
         nonce: BigInt(nonce),
@@ -263,92 +508,35 @@ export class VerifiedProvider {
     return vm;
   }
 
-  private async getBlockHash(blockNumber: BlockNumber) {
-    // TODO: handle cases like 'pending', 'finalized'
-    if(blockNumber === 'latest') {
-      return this.blockHashes[this.latestBlockNumber];
-    } else {
-      const _blockNumber = parseInt(blockNumber.toString());
-      if(_blockNumber > this.latestBlockNumber)
-        throw new Error('BlockNumber requested cannot be in future');
-
-      if(_blockNumber + MAX_BLOCK_HISTORY < this.latestBlockNumber)
-        throw new Error(`BlockNumber requested cannot be older than ${MAX_BLOCK_HISTORY}blocks`);
-
-      while(this.oldestBlockNumber > _blockNumber) {
-        const hash = this.blockHashes[this.oldestBlockNumber]
-        const header = await this.getBlockHeaderByHash(hash);
-        this.oldestBlockNumber-= 1;
-        this.blockHashes[this.oldestBlockNumber] = bufferToHex(header.parentHash);
-      }
-
-      return this.blockHashes[_blockNumber];
+  private async getBlockHash(blockNumber: bigint) {
+    // TODO: fetch the blockHeader is batched request
+    while (this.oldestBlockNumber > blockNumber) {
+      const hash = this.blockHashes[bigIntToHex(this.oldestBlockNumber)];
+      const header = await this.getBlockHeaderByHash(hash);
+      this.oldestBlockNumber--;
+      this.blockHashes[bigIntToHex(this.oldestBlockNumber)] = bufferToHex(
+        header.parentHash,
+      );
     }
-  }
 
-  private async getStateRoot(blockNumber: BlockNumber) {
-    const hash = await this.getBlockHash(blockNumber);
-    const header = await this.getBlockHeaderByHash(hash);
-    return bufferToHex(header.stateRoot);
+    return this.blockHashes[bigIntToHex(blockNumber)];
   }
 
   private async getBlockHeaderByHash(blockHash: Bytes32) {
-    if(!this.blockHeaders[blockHash]) {
+    if (!this.blockHeaders[blockHash]) {
       const blockInfo = await this.web3.eth.getBlock(blockHash);
-      const header = BlockHeader.fromHeaderData({
-        parentHash: blockInfo.parentHash,
-        uncleHash: blockInfo.sha3Uncles,
-        coinbase: blockInfo.miner,
-        stateRoot: blockInfo.stateRoot,
-        transactionsTrie: blockInfo.transactionsRoot,
-        receiptTrie: blockInfo.receiptsRoot,
-        logsBloom: blockInfo.logsBloom,
-        difficulty: BigInt(blockInfo.difficulty),
-        number: BigInt(blockInfo.number),
-        gasLimit: BigInt(blockInfo.gasLimit),
-        gasUsed: BigInt(blockInfo.gasUsed),
-        timestamp: BigInt(blockInfo.timestamp),
-        extraData: blockInfo.extraData,
-        mixHash: (blockInfo as any).mixHash, // some reason the types are not up to date :( 
-        nonce: blockInfo.nonce,
-        baseFeePerGas: blockInfo.baseFeePerGas ? BigInt(blockInfo.baseFeePerGas): undefined
-      });
-      if(!header.hash().equals(toBuffer(blockHash))) {
-        throw new Error('Invalid block or blockHash');
+      const headerData = headerDataFromWeb3Response(blockInfo);
+      const header = BlockHeader.fromHeaderData(headerData);
+
+      if (!header.hash().equals(toBuffer(blockHash))) {
+        throw {
+          error: INTERNAL_ERROR,
+          message: `blockhash doesn't match the blockInfo provided by the RPC`,
+        };
       }
       this.blockHeaders[blockHash] = header;
     }
     return this.blockHeaders[blockHash];
-  }
-
-
-  async call(transaction: RpcTx, blockNumber: BlockNumber) {
-    const hash = await this.getBlockHash(blockNumber);
-    const header = await this.getBlockHeaderByHash(hash);
-    const vm = await this.getVM(
-      transaction,
-      blockNumber,
-      bufferToHex(header.stateRoot),
-    );
-    const { from, to, gas: gasLimit, gasPrice, value, data } = transaction;
-    try {
-      const runCallOpts = {
-        caller: isTruthy(from) ? AddressEthereumJs.fromString(from) : undefined,
-        to: isTruthy(to) ? AddressEthereumJs.fromString(to) : undefined,
-        gasLimit: toType(gasLimit, TypeOutput.BigInt),
-        gasPrice: toType(gasPrice, TypeOutput.BigInt),
-        value: toType(value, TypeOutput.BigInt),
-        data: isTruthy(data) ? toBuffer(data) : undefined,
-        block: { header },
-      };
-      const { execResult } = await vm.evm.runCall(runCallOpts);
-      return bufferToHex(execResult.returnValue);
-    } catch (error: any) {
-      throw {
-        code: INTERNAL_ERROR,
-        message: error.message.toString(),
-      };
-    }
   }
 
   private verifyCodeHash(code: Bytes, codeHash: Bytes32): boolean {
@@ -360,13 +548,14 @@ export class VerifiedProvider {
 
   private async verifyProof(
     address: Address,
-    stateRoot: string,
+    storageKeys: Bytes32[],
+    stateRoot: Buffer,
     proof: GetProof,
   ): Promise<boolean> {
     const trie = new Trie();
-    const key = Web3.utils.keccak256(address);
+    const key = Web3.utils.keccak256(address.toString());
     const expectedAccountRLP = await trie.verifyProof(
-      toBuffer(stateRoot),
+      stateRoot,
       toBuffer(key),
       proof.accountProof.map(a => toBuffer(a)),
     );
@@ -380,9 +569,10 @@ export class VerifiedProvider {
       !!expectedAccountRLP && expectedAccountRLP.equals(account.serialize());
     if (!isAccountValid) return false;
 
-    for (const sp of proof.storageProof) {
+    for (let i = 0; i < storageKeys.length; i++) {
+      const sp = proof.storageProof[i];
       const key = Web3.utils.keccak256(
-        bufferToHex(setLengthLeft(toBuffer(sp.key), 32)),
+        bufferToHex(setLengthLeft(toBuffer(storageKeys[i]), 32)),
       );
       const expectedStorageRLP = await trie.verifyProof(
         toBuffer(proof.storageHash),
