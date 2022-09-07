@@ -8,9 +8,7 @@ const proverCount = 8;
 const committeeSize = 512;
 const trials = 1;
 const herokuAppRandomID = 'chocolate';
-const treeDegrees = [
-  20000,
-];
+const treeDegrees = [20000];
 const batchSizesOLC = [20000];
 const chainSizes = [10].map(v => Math.floor(v * 365));
 

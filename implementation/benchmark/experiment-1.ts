@@ -48,7 +48,10 @@ async function main() {
           chainConfig,
         );
         benchmarks.push(result);
-        fs.writeFileSync(absBenchmarkOutput, JSON.stringify(benchmarks, null, 2));
+        fs.writeFileSync(
+          absBenchmarkOutput,
+          JSON.stringify(benchmarks, null, 2),
+        );
         if (batchSize > chainSize) break;
       }
     }

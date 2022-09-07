@@ -17,6 +17,9 @@ import {
   zeros,
   isTruthy,
   isFalsy,
+  KECCAK256_NULL_S,
+  KECCAK256_NULL,
+  KECCAK256_RLP,
 } from '@ethereumjs/util';
 import { VM } from '@ethereumjs/vm';
 import { BlockHeader, Block } from '@ethereumjs/block';
@@ -44,11 +47,10 @@ import {
   ZERO_ADDR,
   GAS_LIMIT,
   REQUEST_BATCH_SIZE,
-  EMPTY_ACCOUNT_EXTCODEHASH,
   MAX_BLOCK_HISTORY,
   INTERNAL_ERROR,
   INVALID_PARAMS,
-  MAX_SOCKET
+  MAX_SOCKET,
 } from './constants';
 import {
   headerDataFromWeb3Response,
@@ -59,6 +61,8 @@ import {
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
 const bigIntToHex = (n: string | bigint): string =>
   '0x' + BigInt(n).toString(16);
+
+const emptyAccountSerialize = new Account().serialize();
 
 // TODO: handle fallback if RPC fails
 // TODO: if anything is accessed outside the accesslist the provider
@@ -102,7 +106,9 @@ export class VerifiedProvider {
     this.web3 = new Web3(
       new Web3.providers.HttpProvider(providerURL, {
         keepAlive: true,
-        agent: { http: new http.Agent({ keepAlive: true, maxSockets: MAX_SOCKET}) }
+        agent: {
+          http: new http.Agent({ keepAlive: true, maxSockets: MAX_SOCKET }),
+        },
       }),
     );
     this.common = new Common({
@@ -139,11 +145,11 @@ export class VerifiedProvider {
     return this.web3.utils.numberToHex(proof.balance);
   }
 
-  async blockNumber(): Promise<HexString> {
+  blockNumber(): HexString {
     return bigIntToHex(this.latestBlockNumber);
   }
 
-  async chainId(): Promise<HexString> {
+  chainId(): HexString {
     return bigIntToHex(this.common.chainId());
   }
 
@@ -298,7 +304,10 @@ export class VerifiedProvider {
     return this.web3.eth.sendSignedTransaction(signedTx);
   }
 
-  private async getJSONRPCBlock(header: BlockHeader, includeTransactions: boolean) {
+  private async getJSONRPCBlock(
+    header: BlockHeader,
+    includeTransactions: boolean,
+  ) {
     const blockInfo = await this.web3.eth.getBlock(
       parseInt(header.number.toString()),
       true,
@@ -369,7 +378,7 @@ export class VerifiedProvider {
     return this.requestTypeToMethod[request.type](request, callback);
   }
 
-  private async fetchRequests(requests: Request[]): Promise<Response[]> {
+  private async fetchRequests(requests: Request[]) {
     const batch = new this.web3.BatchRequest();
     const promises = requests.map(request => {
       return new Promise<Response>((resolve, reject) => {
@@ -393,10 +402,15 @@ export class VerifiedProvider {
     batchSize: number,
   ): Promise<Response[]> {
     const batchedRequests = chunk(requests, batchSize);
-    const responses = batchedRequests.map(requestBatch =>
-      this.fetchRequests(requestBatch),
-    );
-    return flatten(await Promise.all(responses));
+    // const tasks = batchedRequests.map(requestBatch =>
+    //   this.fetchRequests(requestBatch),
+    // );
+    // return flatten((await async.parallelLimit(tasks, RPC_PARALLEL_LIMIT)) as any);
+    const results = [];
+    for (const requestBatch of batchedRequests) {
+      results.push(await this.fetchRequests(requestBatch));
+    }
+    return flatten(results);
   }
 
   private async getVM(
@@ -541,7 +555,7 @@ export class VerifiedProvider {
 
   private verifyCodeHash(code: Bytes, codeHash: Bytes32): boolean {
     return (
-      (code === '0x' && codeHash === EMPTY_ACCOUNT_EXTCODEHASH) ||
+      (code === '0x' && codeHash === '0x' + KECCAK256_NULL_S) ||
       Web3.utils.keccak256(code) === codeHash
     );
   }
@@ -565,8 +579,9 @@ export class VerifiedProvider {
       stateRoot: proof.storageHash,
       codeHash: proof.codeHash,
     });
-    const isAccountValid =
-      !!expectedAccountRLP && expectedAccountRLP.equals(account.serialize());
+    const isAccountValid = account
+      .serialize()
+      .equals(expectedAccountRLP ? expectedAccountRLP : emptyAccountSerialize);
     if (!isAccountValid) return false;
 
     for (let i = 0; i < storageKeys.length; i++) {

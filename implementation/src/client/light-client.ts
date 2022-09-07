@@ -21,15 +21,8 @@ export class LightClient<T> {
     currentPeriod: number,
     startCommittee: Uint8Array[],
   ): Promise<{ syncCommittee: Uint8Array[]; period: number }> {
-    for (
-      let period = startPeriod;
-      period < currentPeriod;
-      period += 1
-    ) {
-      const update = await prover.getSyncUpdate(
-        period,
-        this.batchSize,
-      );
+    for (let period = startPeriod; period < currentPeriod; period += 1) {
+      const update = await prover.getSyncUpdate(period, this.batchSize);
 
       const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
         startCommittee,
@@ -37,15 +30,13 @@ export class LightClient<T> {
       );
 
       if (!(validOrCommittee as boolean)) {
-        console.log(
-          `Found invalid update at period(${period})`,
-        );
+        console.log(`Found invalid update at period(${period})`);
         return {
           syncCommittee: startCommittee,
           period,
         };
       }
-      
+
       startCommittee = validOrCommittee as Uint8Array[];
     }
     return {

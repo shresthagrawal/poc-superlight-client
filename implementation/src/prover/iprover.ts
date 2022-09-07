@@ -15,10 +15,7 @@ export interface IProver<T> {
     maxCount: number,
   ): AsyncOrSync<Uint8Array[]>;
 
-  getLeafHash(
-    period: number,
-    cacheCount: number,
-  ): AsyncOrSync<Uint8Array>;
+  getLeafHash(period: number, cacheCount: number): AsyncOrSync<Uint8Array>;
 
   getMMRInfo(): AsyncOrSync<{
     rootHash: Uint8Array;

@@ -105,7 +105,6 @@ export type RequestResult = {
   data: object | Buffer;
 };
 
-
 const REQUEST_TIMEOUT = 10 * 1000;
 
 export async function handleHTTPSRequest(

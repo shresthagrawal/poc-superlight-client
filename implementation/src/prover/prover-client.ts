@@ -114,10 +114,7 @@ export class ProverClient<T> implements IProver<T> {
     return deepBufferToUint8Array(leaves);
   }
 
-  async getLeafHash(
-    period: number,
-    cacheCount: number,
-  ): Promise<Uint8Array> {
+  async getLeafHash(period: number, cacheCount: number): Promise<Uint8Array> {
     if (!this.cachedLeafHash.has(period)) {
       const vals = await this._getLeafHashes(period, cacheCount);
       for (let i = 0; i < cacheCount; i++) {
