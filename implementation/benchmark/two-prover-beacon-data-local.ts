@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import {
   BeaconStoreProver,
   BeaconStoreVerifier,
@@ -8,7 +8,7 @@ import { SuperlightClient } from '../src/client/superlight-client';
 import { LightClient } from '../src/client/light-client';
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   const beaconStoreProverH = new BeaconStoreProver(true);
   const beaconStoreProverD = new BeaconStoreProver(false);

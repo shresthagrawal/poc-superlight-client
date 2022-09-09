@@ -1,5 +1,5 @@
 import express from 'express';
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import { BeaconStoreProver } from '../store/beacon-store';
 import { DummyStoreProver, DummyStoreFetchProver } from '../store/dummy-store';
 import { ISyncStoreProver } from '../store/isync-store';
@@ -33,7 +33,7 @@ class ProverSetup {
   store: ISyncStoreProver<any> | null = null;
 
   async init() {
-    await init('blst-native');
+    // await init('blst-native');
     setImmediate(async () => {
       this.store = fetchChainInfo
         ? new DummyStoreFetchProver(

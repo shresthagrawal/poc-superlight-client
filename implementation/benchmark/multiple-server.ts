@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import { Worker, isMainThread, workerData, parentPort } from 'worker_threads';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -134,7 +134,7 @@ async function main() {
 }
 
 async function worker() {
-  await init('blst-native');
+  // await init('blst-native');
   const result = await benchmark(workerData);
   parentPort!.postMessage(result);
 }

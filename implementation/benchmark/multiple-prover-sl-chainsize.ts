@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
@@ -76,7 +76,7 @@ async function benchmarkSuperlight(
 }
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   for (let i = 0; i < trial; i++) {
     for (let chainSize of chainSizes) {

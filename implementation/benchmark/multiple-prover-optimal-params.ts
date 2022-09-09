@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
@@ -112,7 +112,7 @@ async function benchmarkLight(
 }
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   for (let i = 0; i < trials; i++) {
     const result = isSuperlight

@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import { DummyStoreProver, DummyStoreVerifier } from '../src/store/dummy-store';
 import { Prover } from '../src/prover/prover';
 import { SuperlightClient } from '../src/client/superlight-client';
@@ -10,7 +10,7 @@ const n = 2;
 const batchSize = 1;
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   const beaconStoreProverH = new DummyStoreProver(
     true,

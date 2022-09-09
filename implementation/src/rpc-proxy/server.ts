@@ -116,6 +116,7 @@ async function getApp() {
     const jsonRPCRequest = req.body;
     server.receive(jsonRPCRequest).then(jsonRPCResponse => {
       if (jsonRPCResponse) {
+        console.log(jsonRPCResponse);
         res.json(jsonRPCResponse);
       } else {
         res.sendStatus(204);

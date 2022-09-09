@@ -1,5 +1,5 @@
 import { ContainerType, ListCompositeType } from '@chainsafe/ssz';
-import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
+import bls from '@chainsafe/bls';
 import { digest } from '@chainsafe/as-sha256';
 import { ISyncStoreVerifer } from '../isync-store';
 import {
@@ -27,7 +27,7 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
     const randomBytesGenerator = new RandomBytesGenerator(genesisSeed + '0');
     const genesisCommitteePK = randomBytesGenerator
       .generateArray(32, committeeSize)
-      .map(entropy => SecretKey.fromKeygen(entropy));
+      .map(entropy => bls.SecretKey.fromKeygen(entropy));
     this.genesisSyncCommittee = genesisCommitteePK.map(pk =>
       pk.toPublicKey().toBytes(),
     );
@@ -44,9 +44,9 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
   ): false | Uint8Array[] {
     // verify if the aggregate signature is valid
     const headerHash = hashHeader(update.header);
-    const committeeKeys = prevCommittee.map(pk => PublicKey.fromBytes(pk));
+    const committeeKeys = prevCommittee.map(pk => bls.PublicKey.fromBytes(pk));
     try {
-      const isAggregateSignatureValid = Signature.fromBytes(
+      const isAggregateSignatureValid = bls.Signature.fromBytes(
         update.aggregateSignature,
       ).verifyAggregate(committeeKeys, headerHash);
       if (!isAggregateSignatureValid) return false;
@@ -70,9 +70,9 @@ export class DummyStoreVerifier implements ISyncStoreVerifer<DummyUpdate> {
 
     // verify if the aggregate signature is valid
     const headerHash = hashHeader(update.header);
-    const committeeKeys = prevCommittee.map(pk => PublicKey.fromBytes(pk));
+    const committeeKeys = prevCommittee.map(pk => bls.PublicKey.fromBytes(pk));
     try {
-      const isAggregateSignatureValid = Signature.fromBytes(
+      const isAggregateSignatureValid = bls.Signature.fromBytes(
         update.aggregateSignature,
       ).verifyAggregate(committeeKeys, headerHash);
       return isAggregateSignatureValid;

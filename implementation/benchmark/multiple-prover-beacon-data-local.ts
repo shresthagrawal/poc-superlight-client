@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import {
   BeaconStoreProver,
   BeaconStoreVerifier,
@@ -13,7 +13,7 @@ const n = 2;
 const batchSize = 1;
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   const beaconStoreProverH = new BeaconStoreProver(true);
   const honestBeaconProver = new Prover(beaconStoreProverH, n);

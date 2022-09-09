@@ -4,7 +4,7 @@
 // Note: the batch size for superlight client is the degree of
 // the MMR, also referred to n in the code.
 
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
 import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
@@ -27,7 +27,7 @@ const chainSizes = [20, 40, 60, 80, 100];
 const committeeSize = 10;
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   const lightClientResults = [];
   const superlightClientResults = [];

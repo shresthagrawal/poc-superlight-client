@@ -1,4 +1,4 @@
-import { init } from '@chainsafe/bls';
+// import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getProverUrls, benchmarkLight, benchmarkSuperlight } from './utils';
@@ -30,7 +30,7 @@ const chainConfig = {
 };
 
 async function main() {
-  await init('blst-native');
+  // await init('blst-native');
 
   for (let trial = 0; trial < trials; trial++) {
     for (let chainSize of chainSizes) {

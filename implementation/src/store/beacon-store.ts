@@ -1,15 +1,16 @@
-import { ssz, altair } from '@chainsafe/lodestar-types';
+import { ssz, altair } from '@lodestar/types';
 import { digest } from '@chainsafe/as-sha256';
 import {
   defaultChainConfig,
   createIBeaconConfig,
   IBeaconConfig,
-} from '@chainsafe/lodestar-config';
-import { PublicKey } from '@chainsafe/bls';
+} from '@lodestar/config';
+import bls from '@chainsafe/bls';
+import { PublicKey } from '@chainsafe/bls/types';
 import { ListCompositeType } from '@chainsafe/ssz';
-import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
-import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
-import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
+import { computeSyncPeriodAtSlot } from '@lodestar/light-client/lib/utils/clock';
+import { assertValidLightClientUpdate } from '@lodestar/light-client/lib/validation';
+import { SyncCommitteeFast } from '@lodestar/light-client/lib/types';
 import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
 import { BEACON_GENESIS_ROOT } from './constants';
 import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
@@ -22,7 +23,6 @@ import {
 } from '../utils';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
-  defaultChainConfig,
   parseInt(GenesisSnapshotJson.currentSlot),
 );
 
@@ -46,7 +46,6 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     const genesisSnapshot =
       ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
     this.startPeriod = computeSyncPeriodAtSlot(
-      defaultChainConfig,
       genesisSnapshot.header.slot,
     );
 
@@ -73,8 +72,8 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
         if (i > 0) {
           this.syncUpdates[i - 1].nextSyncCommittee = {
             pubkeys: committee,
-            aggregatePubkey: PublicKey.aggregate(
-              committee.map(c => PublicKey.fromBytes(c)),
+            aggregatePubkey: bls.PublicKey.aggregate(
+              committee.map(c => bls.PublicKey.fromBytes(c)),
             ).toBytes(),
           };
         }
@@ -141,7 +140,6 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     ) as Uint8Array[];
 
     this.genesisPeriod = computeSyncPeriodAtSlot(
-      defaultChainConfig,
       genesisSnapshot.header.slot,
     );
   }
@@ -151,7 +149,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
   }
 
   private deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
-    return pubkeys.map(pk => PublicKey.fromBytes(pk));
+    return pubkeys.map(pk => bls.PublicKey.fromBytes(pk));
   }
 
   // This function is ovveride of the original function in
@@ -164,7 +162,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     const pubkeys = this.deserializePubkeys(syncCommittee);
     return {
       pubkeys,
-      aggregatePubkey: PublicKey.aggregate(pubkeys),
+      aggregatePubkey: bls.PublicKey.aggregate(pubkeys),
     };
   }
 
