@@ -22,8 +22,9 @@ async function getApp() {
   // TODO: use a light/super client to sync and get the latest blockHeader
   const web3 = new Web3(RPC_URL);
   const block = await web3.eth.getBlock('latest');
+  const chainId = await web3.eth.getChainId();
 
-  const provider = new VerifiedProvider(RPC_URL, block.number, block.hash);
+  const provider = new VerifiedProvider(RPC_URL, block.number, block.hash, chainId);
 
   server.addMethod(
     'eth_getBalance',

@@ -102,6 +102,7 @@ export class VerifiedProvider {
     providerURL: string,
     blockNumber: bigint | number,
     blockHash: Bytes32,
+    chain: bigint | Chain = Chain.Mainnet,
   ) {
     this.web3 = new Web3(
       new Web3.providers.HttpProvider(providerURL, {
@@ -112,8 +113,8 @@ export class VerifiedProvider {
       }),
     );
     this.common = new Common({
-      chain: Chain.Mainnet,
-      hardfork: Hardfork.ArrowGlacier,
+      chain,
+      // hardfork: Hardfork.ArrowGlacier,
     });
     const _blockNumber = BigInt(blockNumber);
     this.latestBlockNumber = _blockNumber;
@@ -301,7 +302,8 @@ export class VerifiedProvider {
   }
 
   async sendRawTransaction(signedTx: string) {
-    return this.web3.eth.sendSignedTransaction(signedTx);
+    const recipt = await this.web3.eth.sendSignedTransaction(signedTx);
+    return (recipt as any).transactionHash;
   }
 
   private async getJSONRPCBlock(
