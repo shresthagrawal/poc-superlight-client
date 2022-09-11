@@ -12,7 +12,7 @@ import {
 import Web3 from 'web3';
 import { ClientManager } from './client-manager.js';
 import { VerifiedProvider } from './verified-provider.js';
-import { RPCTx } from './types';
+import { RPCTx } from './types.js';
 import { INTERNAL_ERROR } from './constants.js';
 
 const RPC_URL = process.env.RPC_URL || '';
@@ -24,7 +24,12 @@ async function getApp() {
   // TODO: use a light/super client to sync and get the latest blockHeader
   try {
     const cm = new ClientManager([], BEACON_CHAIN_API_URL);
-    console.log(await cm.getConcensusBlock(BigInt(3854999), "0x2a23f5d7c89dac223cc3a86b363f3a25a682de847a93686d11b751f5d6d3f26e"));
+    console.log(
+      await cm.getConcensusBlock(
+        BigInt(3854999),
+        '0x2a23f5d7c89dac223cc3a86b363f3a25a682de847a93686d11b751f5d6d3f26e',
+      ),
+    );
   } catch (e) {
     console.log(e);
   }
@@ -33,7 +38,12 @@ async function getApp() {
   const block = await web3.eth.getBlock('latest');
   const chainId = await web3.eth.getChainId();
 
-  const provider = new VerifiedProvider(RPC_URL, block.number, block.hash, chainId);
+  const provider = new VerifiedProvider(
+    RPC_URL,
+    block.number,
+    block.hash,
+    chainId,
+  );
 
   server.addMethod(
     'eth_getBalance',

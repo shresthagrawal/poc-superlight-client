@@ -1,14 +1,13 @@
-import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
-import { DummyStoreVerifier } from '../src/store/dummy-store';
-import { BeaconStoreVerifier } from '../src/store/beacon-store';
-import { ProverClient } from '../src/prover/prover-client';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { LightClient } from '../src/client/light-client';
-import { Benchmark } from '../src/benchmark';
-import { shuffle } from '../src/utils';
+import { DummyStoreVerifier } from '../src/store/dummy-store/index.js';
+import { BeaconStoreVerifier } from '../src/store/beacon-store.js';
+import { ProverClient } from '../src/prover/prover-client.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { LightClient } from '../src/client/light-client.js';
+import { Benchmark } from '../src/benchmark.js';
+import { shuffle } from '../src/utils.js';
 
 // This config should match the prover config
 const proverCount = 8;
@@ -102,8 +101,6 @@ async function benchmarkLight(chainSize: number, batchSize: number) {
 }
 
 async function main() {
-  await init('blst-native');
-
   for (let chainSize of chainSizes) {
     for (let treeDegree of treeDegrees) {
       if (treeDegree > chainSize) continue;

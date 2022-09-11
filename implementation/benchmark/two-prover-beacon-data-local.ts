@@ -1,15 +1,12 @@
-import { init } from '@chainsafe/bls';
 import {
   BeaconStoreProver,
   BeaconStoreVerifier,
-} from '../src/store/beacon-store';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { LightClient } from '../src/client/light-client';
+} from '../src/store/beacon-store.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { LightClient } from '../src/client/light-client.js';
 
 async function main() {
-  await init('blst-native');
-
   const beaconStoreProverH = new BeaconStoreProver(true);
   const beaconStoreProverD = new BeaconStoreProver(false);
 

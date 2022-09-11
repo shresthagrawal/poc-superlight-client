@@ -1,8 +1,10 @@
-import { init } from '@chainsafe/bls';
-import { DummyStoreProver, DummyStoreVerifier } from '../src/store/dummy-store';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { LightClient } from '../src/client/light-client';
+import {
+  DummyStoreProver,
+  DummyStoreVerifier,
+} from '../src/store/dummy-store/index.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { LightClient } from '../src/client/light-client.js';
 
 const chainSize = 1000;
 const committeeSize = 100;
@@ -10,8 +12,6 @@ const n = 2;
 const batchSize = 1;
 
 async function main() {
-  await init('blst-native');
-
   const beaconStoreProverH = new DummyStoreProver(
     true,
     chainSize,

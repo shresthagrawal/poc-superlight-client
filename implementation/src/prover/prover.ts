@@ -1,8 +1,8 @@
 import { digest } from '@chainsafe/as-sha256';
-import { IProver } from './iprover';
-import { MerkleMountainRange, Peaks } from '../merkle-mountain-range';
-import { concatUint8Array } from '../utils';
-import { ISyncStoreProver } from '../store/isync-store';
+import { IProver } from './iprover.js';
+import { MerkleMountainRange, Peaks } from '../merkle-mountain-range.js';
+import { concatUint8Array } from '../utils.js';
+import { ISyncStoreProver } from '../store/isync-store.js';
 
 export class Prover<T> implements IProver<T> {
   protected mmr: MerkleMountainRange;

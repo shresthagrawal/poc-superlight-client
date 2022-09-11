@@ -1,9 +1,9 @@
 import { ContainerType, ListCompositeType } from '@chainsafe/ssz';
-import { ISyncStoreProver } from '../isync-store';
-import { getRandomInt } from '../../utils';
-import { DummyUpdateRaw, DummyUpdate, CommitteeChainInfo } from './types';
-import { fromRawUpdate, generateChain } from './utils';
-import { getUpdateSSZ } from './ssz';
+import { ISyncStoreProver } from '../isync-store.js';
+import { getRandomInt } from '../../utils.js';
+import { DummyUpdateRaw, DummyUpdate, CommitteeChainInfo } from './types.js';
+import { fromRawUpdate, generateChain } from './utils.js';
+import { getUpdateSSZ } from './ssz.js';
 
 export class DummyStoreProver implements ISyncStoreProver<DummyUpdate> {
   startPeriod: number = 0;

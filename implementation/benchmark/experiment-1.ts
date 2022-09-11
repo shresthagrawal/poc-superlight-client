@@ -1,7 +1,6 @@
-import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getProverUrls, benchmarkLight, benchmarkSuperlight } from './utils';
+import { getProverUrls, benchmarkLight, benchmarkSuperlight } from './utils.js';
 
 // This config should match the prover config
 const proverCount = 8;
@@ -35,8 +34,6 @@ const chainConfig = {
 };
 
 async function main() {
-  await init('blst-native');
-
   for (let trial = 0; trial < trials; trial++) {
     for (let chainSize of chainSizesLC) {
       for (let batchSize of batchSizesLC) {

@@ -1,6 +1,6 @@
-import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils';
-import { ISyncStoreVerifer } from '../store/isync-store';
-import { IProver } from '../prover/iprover';
+import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils.js';
+import { ISyncStoreVerifer } from '../store/isync-store.js';
+import { IProver } from '../prover/iprover.js';
 
 export type ProverInfo = {
   syncCommitteeHash: Uint8Array;

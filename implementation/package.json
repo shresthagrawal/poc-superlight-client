@@ -1,7 +1,7 @@
 {
-  "name": "SuperLightClientETHPoS",
+  "name": "SuperLightClientPoSETH",
   "version": "1.0.0",
-  "description": "Superligh client implementation for Ethereum PoS",
+  "description": "Superligh client implementation for PoS Ethereum",
   "main": "dist/prover/server.js",
   "author": "shresthagrawal.31@gmail.com",
   "license": "MIT",

@@ -8,7 +8,6 @@ import {
 import { PublicKey } from '@chainsafe/bls/blst-native';
 import { ListCompositeType } from '@chainsafe/ssz';
 import { computeSyncPeriodAtSlot } from '@lodestar/light-client/utils';
-// @ts-ignore
 import { assertValidLightClientUpdate } from '@lodestar/light-client';
 import { SyncCommitteeFast } from '@lodestar/light-client/types';
 import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store.js';
@@ -21,7 +20,8 @@ import {
   concatUint8Array,
 } from '../utils.js';
 
-import GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
+import GenesisSnapshotJson from './data/beacon-genesis-snapshot.json' assert { type: 'json' };
+import BeaconSyncUpdates from './data/beacon-sync-updates.json' assert { type: 'json' };
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   parseInt(GenesisSnapshotJson.currentSlot),
@@ -38,7 +38,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   constructor(
     // This is required for testing purpose to make dishonest clients
     public honest: boolean = true,
-    syncUpdatesJson: any[] = require('./data/beacon-sync-updates.json'),
+    syncUpdatesJson: any[] = BeaconSyncUpdates as any,
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
     this.syncUpdates = syncUpdatesJson.map(u =>
@@ -46,9 +46,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
     );
     const genesisSnapshot =
       ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
-    this.startPeriod = computeSyncPeriodAtSlot(
-      genesisSnapshot.header.slot,
-    );
+    this.startPeriod = computeSyncPeriodAtSlot(genesisSnapshot.header.slot);
 
     // The nextSyncCommittee from the last update is not considered
     // as that is the sync committee in the upcomming period
@@ -140,9 +138,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
       genesisSnapshot.currentSyncCommittee.pubkeys,
     ) as Uint8Array[];
 
-    this.genesisPeriod = computeSyncPeriodAtSlot(
-      genesisSnapshot.header.slot,
-    );
+    this.genesisPeriod = computeSyncPeriodAtSlot(genesisSnapshot.header.slot);
   }
 
   getCommitteeHash(committee: Uint8Array[]): Uint8Array {
