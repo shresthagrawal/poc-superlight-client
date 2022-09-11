@@ -1,5 +1,5 @@
 import { digest } from '@chainsafe/as-sha256';
-import bls from '@chainsafe/bls';
+import { SecretKey, Signature } from '@chainsafe/bls';
 import { ContainerType } from '@chainsafe/ssz';
 import {
   DummyHeader,
@@ -47,8 +47,8 @@ export function generateChain(
     seed
       ? randomBytesGenerator
           .generateArray(32, committeeSize)
-          .map(entropy => bls.SecretKey.fromKeygen(entropy))
-      : new Array(committeeSize).fill(null).map(i => bls.SecretKey.fromKeygen());
+          .map(entropy => SecretKey.fromKeygen(entropy))
+      : new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen());
   // TODO: fix type
   const getCommitteeFromPK = (cPK: any[]) =>
     cPK.map(pk => pk.toPublicKey().toBytes());
@@ -74,7 +74,7 @@ export function generateChain(
     // generate correct signature for honest updates
     const headerHash = hashHeader(header);
     const signatures = currentCommitteePK.map(pk => pk.sign(headerHash));
-    const aggregateSignature = bls.Signature.aggregate(signatures).toBytes();
+    const aggregateSignature = Signature.aggregate(signatures).toBytes();
 
     currentCommitteePK = nextSyncCommitteePK;
     const update = {

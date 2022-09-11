@@ -1,7 +1,7 @@
 import { Worker, isMainThread, workerData, parentPort } from 'worker_threads';
 import * as fs from 'fs';
 import * as path from 'path';
-// import { init } from '@chainsafe/bls';
+import { init } from '@chainsafe/bls';
 import { generateChain } from './utils';
 import { getChainInfoSSZ } from './ssz';
 
@@ -13,7 +13,7 @@ const count = 8;
 const ssz = getChainInfoSSZ(maxChainSize, committeeSize);
 
 async function worker(i: number) {
-  // await init('blst-native');
+  await init('blst-native');
   const chainInfo = generateChain(seed + i, maxChainSize, committeeSize);
   const chainInfoRaw = ssz.serialize(chainInfo);
   const resultPath = path.join(

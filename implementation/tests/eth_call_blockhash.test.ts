@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import Web3 from 'web3';
-import { VerifiedProvider } from '../src/rpc-proxy/verifiedProvider';
+import { VerifiedProvider } from '../src/rpc-proxy/verified-provider';
 import { Interface } from '@ethersproject/abi';
 import multiCallAbi from './multicall.abi.json';
 

@@ -5,8 +5,7 @@ import {
   createIBeaconConfig,
   IBeaconConfig,
 } from '@lodestar/config';
-import bls from '@chainsafe/bls';
-import { PublicKey } from '@chainsafe/bls/types';
+import { PublicKey } from '@chainsafe/bls';
 import { ListCompositeType } from '@chainsafe/ssz';
 import { computeSyncPeriodAtSlot } from '@lodestar/light-client/lib/utils/clock';
 import { assertValidLightClientUpdate } from '@lodestar/light-client/lib/validation';
@@ -72,8 +71,8 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
         if (i > 0) {
           this.syncUpdates[i - 1].nextSyncCommittee = {
             pubkeys: committee,
-            aggregatePubkey: bls.PublicKey.aggregate(
-              committee.map(c => bls.PublicKey.fromBytes(c)),
+            aggregatePubkey: PublicKey.aggregate(
+              committee.map(c => PublicKey.fromBytes(c)),
             ).toBytes(),
           };
         }
@@ -149,7 +148,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
   }
 
   private deserializePubkeys(pubkeys: Uint8Array[]): PublicKey[] {
-    return pubkeys.map(pk => bls.PublicKey.fromBytes(pk));
+    return pubkeys.map(pk => PublicKey.fromBytes(pk));
   }
 
   // This function is ovveride of the original function in
@@ -162,7 +161,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     const pubkeys = this.deserializePubkeys(syncCommittee);
     return {
       pubkeys,
-      aggregatePubkey: bls.PublicKey.aggregate(pubkeys),
+      aggregatePubkey: PublicKey.aggregate(pubkeys),
     };
   }
 

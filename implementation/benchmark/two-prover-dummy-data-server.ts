@@ -1,4 +1,4 @@
-// import { init } from '@chainsafe/bls';
+import { init } from '@chainsafe/bls';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
 import { ProverClient } from '../src/prover/prover-client';
 import { Prover } from '../src/prover/prover';
@@ -15,7 +15,7 @@ const proverUrls = [
 ];
 
 async function main() {
-  // await init('blst-native');
+  await init('blst-native');
 
   const dummyStoreVerifier = new DummyStoreVerifier();
 
