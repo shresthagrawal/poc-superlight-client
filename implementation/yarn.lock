@@ -454,10 +454,24 @@
     "@lodestar/params" "^1.0.0"
     "@lodestar/types" "^1.0.0"
 
-"@lodestar/light-client@^1.0.0":
+"@lodestar/light-client@https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?c3e2300b9b3007500ed198c6a69a53d48ce2fb57":
   version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@lodestar/light-client/-/light-client-1.0.0.tgz#f55d44958c8fe5b3a8fafb0febfde63bbbb75521"
-  integrity sha512-bSWO+r4jzK0R4G8TzKMA/oR3lF5ZNnAZdJfidWzr8Zs16N1RhtVFGZcsDj5Ch6uGE0N0jxZnSx7Gn/B6VUTI4g==
+  resolved "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?c3e2300b9b3007500ed198c6a69a53d48ce2fb57#b553f09912721df32bcfcc1f81536b56dc47b810"
+  dependencies:
+    "@chainsafe/bls" "7.1.1"
+    "@chainsafe/persistent-merkle-tree" "^0.4.2"
+    "@chainsafe/ssz" "^0.9.2"
+    "@lodestar/api" "^1.0.0"
+    "@lodestar/config" "^1.0.0"
+    "@lodestar/params" "^1.0.0"
+    "@lodestar/types" "^1.0.0"
+    "@lodestar/utils" "^1.0.0"
+    cross-fetch "^3.1.4"
+    mitt "^3.0.0"
+
+"@lodestar/light-client@https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?fix/extra-exports":
+  version "1.0.0"
+  resolved "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?fix/extra-exports#637c4f24896e1fddd5b50e53bfc205cdd29e7945"
   dependencies:
     "@chainsafe/bls" "7.1.1"
     "@chainsafe/persistent-merkle-tree" "^0.4.2"
