@@ -1,4 +1,4 @@
-import { logFloor, concatUint8Array, isUint8ArrayEq } from './utils';
+import { logFloor, concatUint8Array, isUint8ArrayEq } from './utils.js';
 import { toHexString } from '@chainsafe/ssz';
 
 export type Node = {

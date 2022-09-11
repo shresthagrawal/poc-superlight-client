@@ -5,9 +5,9 @@ import * as net from 'net';
 
 import Decimal from 'decimal.js';
 import { toHexString, fromHexString } from '@chainsafe/ssz';
-import { SecretKey } from '@chainsafe/bls';
+import { SecretKey } from '@chainsafe/bls/blst-native';
 import seedrandom from 'seedrandom';
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 export function logFloor(x: number, base: number = 2) {
   return Decimal.log(x, base).floor().toNumber();

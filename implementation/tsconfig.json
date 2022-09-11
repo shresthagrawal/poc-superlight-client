@@ -3,7 +3,8 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "lib": ["es2020"],
-    "module": "commonjs",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "noImplicitAny": true,
     "outDir": "./dist/",
     "preserveConstEnums": true,
@@ -18,5 +19,8 @@
     "emitDecoratorMetadata": true,
     "typeRoots": ["node_modules/@types"]
   },
-  "include": ["src/**/*", "benchmark/**/*"]
+  "include": ["src/**/*", "benchmark/**/*"],
+  "ts-node": {
+    "esm": true
+  }
 }

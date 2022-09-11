@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { altair } from '@lodestar/types';
-import { SuperlightClient } from '../client/superlight-client';
-import { BeaconStoreVerifier } from '../store/beacon-store';
-import { ProverClient } from '../prover/prover-client';
-import { Benchmark } from '../benchmark';
-import { Bytes32 } from './types';
+import { SuperlightClient } from '../client/superlight-client.js';
+import { BeaconStoreVerifier } from '../store/beacon-store.js';
+import { ProverClient } from '../prover/prover-client.js';
+import { Benchmark } from '../benchmark.js';
+import { Bytes32 } from './types.js';
 
 export class ClientManager {
   // TODO: make it generic to any client

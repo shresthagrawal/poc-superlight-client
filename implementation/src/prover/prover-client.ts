@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { toHexString } from '@chainsafe/ssz';
-import { IProver } from './iprover';
-import { Peaks } from '../merkle-mountain-range';
-import { ISyncStoreVerifer } from '../store/isync-store';
-import { Benchmark } from '../benchmark';
-import { wait, handleHTTPSRequest } from '../utils';
+import { IProver } from './iprover.js';
+import { Peaks } from '../merkle-mountain-range.js';
+import { ISyncStoreVerifer } from '../store/isync-store.js';
+import { Benchmark } from '../benchmark.js';
+import { wait, handleHTTPSRequest } from '../utils.js';
 import {
   LeafWithProofSSZ,
   MMRInfoSSZ,
@@ -12,7 +12,7 @@ import {
   LeafHashesSSZ,
   CommitteeSSZ,
   deepBufferToUint8Array,
-} from './ssz-types';
+} from './ssz-types.js';
 
 export class ProverClient<T> implements IProver<T> {
   cachedGetRequestResult: Map<String, Buffer>;

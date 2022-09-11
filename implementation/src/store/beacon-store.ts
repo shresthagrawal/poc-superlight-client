@@ -5,21 +5,23 @@ import {
   createIBeaconConfig,
   IBeaconConfig,
 } from '@lodestar/config';
-import { PublicKey } from '@chainsafe/bls';
+import { PublicKey } from '@chainsafe/bls/blst-native';
 import { ListCompositeType } from '@chainsafe/ssz';
-import { computeSyncPeriodAtSlot } from '@lodestar/light-client/lib/utils/clock';
-import { assertValidLightClientUpdate } from '@lodestar/light-client/lib/validation';
-import { SyncCommitteeFast } from '@lodestar/light-client/lib/types';
-import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
-import { BEACON_GENESIS_ROOT } from './constants';
-import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
+import { computeSyncPeriodAtSlot } from '@lodestar/light-client/utils';
+// @ts-ignore
+import { assertValidLightClientUpdate } from '@lodestar/light-client';
+import { SyncCommitteeFast } from '@lodestar/light-client/types';
+import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store.js';
+import { BEACON_GENESIS_ROOT } from './constants.js';
 import {
   isUint8ArrayEq,
   isCommitteeSame,
   getRandomInt,
   generateRandomSyncCommittee,
   concatUint8Array,
-} from '../utils';
+} from '../utils.js';
+
+import GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
   parseInt(GenesisSnapshotJson.currentSlot),
