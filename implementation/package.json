@@ -46,7 +46,7 @@
     "@ethereumjs/vm": "6.0.0-beta.3",
     "@ethersproject/abi": "5.7.0",
     "@lodestar/config": "^1.0.0",
-    "@lodestar/light-client": "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?c3e2300b9b3007500ed198c6a69a53d48ce2fb57",
+    "@lodestar/light-client": "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?8c84c7acf62437172d80acc8dde79924eaa80608",
     "@lodestar/types": "^1.0.0",
     "@types/async": "3.2.15",
     "@types/lodash.chunk": "^4.2.7",
