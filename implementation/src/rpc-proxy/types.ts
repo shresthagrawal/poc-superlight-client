@@ -10,6 +10,11 @@ export type AddressHex = string;
 export type ChainId = number;
 export type HexString = string;
 
+export type ExecutionInfo = {
+  blockhash: string;
+  blockNumber: bigint;
+}
+
 export interface RPCTx {
   from?: string;
   to?: string;
