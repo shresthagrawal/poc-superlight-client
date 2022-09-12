@@ -13,7 +13,7 @@ import {
   FeeMarketEIP1559TxData,
   TypedTransaction,
 } from '@ethereumjs/tx';
-import { JSONRPCTx, JSONRPCBlock } from './types';
+import { JSONRPCTx, JSONRPCBlock } from './types.js';
 
 // TODO: fix blockInfo type
 export function headerDataFromWeb3Response(blockInfo: any): HeaderData {

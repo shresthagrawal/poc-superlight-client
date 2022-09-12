@@ -6,7 +6,7 @@ import {
   UintNumberType,
   ListCompositeType,
 } from '@chainsafe/ssz';
-import { deepTypecast } from '../utils';
+import { deepTypecast } from '../utils.js';
 
 // these params can be adjusted
 const MAX_DEPT = 1000;

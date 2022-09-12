@@ -1,13 +1,12 @@
-import { init } from '@chainsafe/bls';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DummyStoreVerifier } from '../src/store/dummy-store';
-import { BeaconStoreVerifier } from '../src/store/beacon-store';
-import { ProverClient } from '../src/prover/prover-client';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { Benchmark } from '../src/benchmark';
-import { shuffle } from '../src/utils';
+import { BeaconStoreVerifier } from '../src/store/beacon-store.js';
+import { ProverClient } from '../src/prover/prover-client.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { Benchmark } from '../src/benchmark.js';
+import { shuffle } from '../src/utils.js';
 
 // This config should match the prover config
 const proverCount = 8;
@@ -76,8 +75,6 @@ async function benchmarkSuperlight(
 }
 
 async function main() {
-  await init('blst-native');
-
   for (let i = 0; i < trial; i++) {
     for (let chainSize of chainSizes) {
       for (let treeDegree of treeDegrees) {

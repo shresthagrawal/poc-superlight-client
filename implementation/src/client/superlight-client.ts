@@ -5,11 +5,11 @@ import {
   smallHexStr,
   isCommitteeSame,
   logFloor,
-} from '../utils';
-import { MerkleVerify } from '../merkle-tree';
-import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
-import { ISyncStoreVerifer } from '../store/isync-store';
-import { IProver } from '../prover/iprover';
+} from '../utils.js';
+import { MerkleVerify } from '../merkle-tree.js';
+import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range.js';
+import { ISyncStoreVerifer } from '../store/isync-store.js';
+import { IProver } from '../prover/iprover.js';
 
 export type ProverInfo = {
   root: Uint8Array;

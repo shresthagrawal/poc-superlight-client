@@ -42,7 +42,7 @@ import {
   BlockNumber as BlockOpt,
   Method,
   HexString,
-} from './types';
+} from './types.js';
 import {
   ZERO_ADDR,
   GAS_LIMIT,
@@ -51,12 +51,12 @@ import {
   INTERNAL_ERROR,
   INVALID_PARAMS,
   MAX_SOCKET,
-} from './constants';
+} from './constants.js';
 import {
   headerDataFromWeb3Response,
   blockDataFromWeb3Response,
   toJSONRPCBlock,
-} from './utils';
+} from './utils.js';
 
 // const toBuffer = (val: string) => Buffer.from(fromHexString(val));
 const bigIntToHex = (n: string | bigint): string =>
