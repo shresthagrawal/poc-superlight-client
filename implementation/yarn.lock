@@ -454,9 +454,9 @@
     "@lodestar/params" "^1.0.0"
     "@lodestar/types" "^1.0.0"
 
-"@lodestar/light-client@https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?8c84c7acf62437172d80acc8dde79924eaa80608":
+"@lodestar/light-client@https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?edc9b76aaeb9d480011ae1f2302e73787d84e69e":
   version "1.0.0"
-  resolved "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?8c84c7acf62437172d80acc8dde79924eaa80608#6692af224975593c7f561edb4a733e7c5d5748a4"
+  resolved "https://gitpkg.now.sh/shresthagrawal/lodestar/packages/light-client?edc9b76aaeb9d480011ae1f2302e73787d84e69e#ff5e02cbee23bcffbd44feae924270b2bfd4e8b4"
   dependencies:
     "@chainsafe/bls" "7.1.1"
     "@chainsafe/persistent-merkle-tree" "^0.4.2"

@@ -23,7 +23,6 @@ export class LightClient<T> {
   ): Promise<{ syncCommittee: Uint8Array[]; period: number }> {
     for (let period = startPeriod; period < currentPeriod; period += 1) {
       const update = await prover.getSyncUpdate(period, this.batchSize);
-
       const validOrCommittee = this.store.syncUpdateVerifyGetCommittee(
         startCommittee,
         update,

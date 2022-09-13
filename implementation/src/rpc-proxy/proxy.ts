@@ -24,6 +24,7 @@ async function getApp() {
   const app = express();
   
   const cm = new ClientManager([], BEACON_CHAIN_API_URL, RPC_URL, CHAIN_ID);
+  await cm.setup();
   const provider = await cm.sync();
 
   server.addMethod(

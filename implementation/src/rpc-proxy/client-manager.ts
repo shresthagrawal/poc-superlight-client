@@ -1,19 +1,26 @@
 import axios from 'axios';
-import { altair } from '@lodestar/types';
+import * as altair from '@lodestar/types/altair';
 import * as bellatrix from '@lodestar/types/bellatrix';
-import { toHexString } from '@chainsafe/ssz';
-import { SuperlightClient } from '../client/superlight-client.js';
+import { toHexString, fromHexString } from '@chainsafe/ssz';
+import { init } from "@chainsafe/bls/switchable";
+import {
+  createIBeaconConfig,
+  IBeaconConfig,
+} from '@lodestar/config';
+import { networksChainConfig } from '@lodestar/config/networks';
+import { LightClient } from '../client/light-client.js';
+import { BeaconAPIProver } from '../prover/beacon-api-prover.js';
 import { BeaconStoreVerifier } from '../store/beacon-store.js';
-import { ProverClient } from '../prover/prover-client.js';
-import { Benchmark } from '../benchmark.js';
+import { IProver } from '../prover/iprover.js';
 import { Bytes32, ExecutionInfo } from './types.js';
 import { VerifiedProvider } from './verified-provider.js';
+import GoerliBootstrapData from './bootstrap-data/goerli.json' assert { type: 'json' };
 
 export class ClientManager {
   // TODO: make it generic to any client
-  client: SuperlightClient<altair.LightClientUpdate>;
+  client: LightClient<altair.LightClientUpdate>;
   store: BeaconStoreVerifier;
-  provers: ProverClient<altair.LightClientUpdate>[];
+  provers: IProver<altair.LightClientUpdate>[];
   provider: VerifiedProvider | null = null;
 
   constructor(
@@ -23,33 +30,37 @@ export class ClientManager {
     protected chainId: number,
     n: number = 2,
   ) {
-    // TODO: fix the genesis data and current period
-    this.store = new BeaconStoreVerifier();
-    const benchmark = new Benchmark();
-    this.provers = proverURLs.map(
-      url => new ProverClient(this.store, url, benchmark),
+    const chainConfig = createIBeaconConfig(networksChainConfig['goerli'], fromHexString(GoerliBootstrapData.genesis_validator_root));
+    this.store = new BeaconStoreVerifier(
+      GoerliBootstrapData.committee_pk, 
+      parseInt(GoerliBootstrapData.slot),
+      parseInt(GoerliBootstrapData.genesis_time),
+      chainConfig
     );
-    this.client = new SuperlightClient(this.store, this.provers, n);
+    this.provers = [new BeaconAPIProver(beaconChainAPIURL)];
+    // TODO: change the batch size after the BeaconAPIProver edge case is done
+    this.client = new LightClient(this.store, this.provers, 1);
+  }
+
+  async setup() {
+    await init('blst-native');
   }
 
   async sync(): Promise<VerifiedProvider> {
-    // all honest provers have the same latest committee
-    // const honestProverInfos = await this.client.sync();
-    // const period = await this.store.getCurrentPeriod();
-
-    // for (const proverInfo of honestProverInfos) {
-    //   const update = await this.provers[proverInfo.index].getSyncUpdate(
-    //     period,
-    //     1,
-    //   );
-    // }
-    // TODO: get the latest sync committee
-
+    const { syncCommittee } = await this.client.sync();
+    console.log('Verified to the syncCommittee of the latest period');
+    
     const res = await axios.get(`${this.beaconChainAPIURL}/eth/v1/beacon/light_client/optimistic_update/`);
     const updateJSON = res.data.data;
+    const update = this.store.optimisticUpdateFromJSON(updateJSON);
+    const isUpdateCorrect = this.store.optimisticUpdateVerify(syncCommittee, update);
     // TODO: check the update agains the latest sync commttee
+    if(!(isUpdateCorrect as boolean))
+      throw new Error('invalid optimistic update provided by the rpc');
+    console.log(`Optimistic update verified for slot ${updateJSON.attested_header.slot}`);
 
     const { blockhash, blockNumber } = await this.getConcensusBlock(updateJSON.attested_header.slot, updateJSON.attested_header.body_root);
+    console.log(`Booting verified provider with blockhash(${blockhash}) and blockNumber(${blockNumber})`);
     this.provider = new VerifiedProvider(this.providerURL, blockNumber, blockhash, this.chainId);
     return this.provider;
   }
