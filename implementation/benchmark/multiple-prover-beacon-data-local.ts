@@ -1,20 +1,17 @@
-import { init } from '@chainsafe/bls';
 import {
   BeaconStoreProver,
   BeaconStoreVerifier,
-} from '../src/store/beacon-store';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { LightClient } from '../src/client/light-client';
-import { shuffle } from '../src/utils';
+} from '../src/store/beacon-store.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { LightClient } from '../src/client/light-client.js';
+import { shuffle } from '../src/utils.js';
 
 const dishonestProverCount = 4;
 const n = 2;
 const batchSize = 1;
 
 async function main() {
-  await init('blst-native');
-
   const beaconStoreProverH = new BeaconStoreProver(true);
   const honestBeaconProver = new Prover(beaconStoreProverH, n);
 

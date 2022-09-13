@@ -1,10 +1,9 @@
-import { init } from '@chainsafe/bls';
-import { BeaconStoreVerifier } from '../src/store/beacon-store';
-import { ProverClient } from '../src/prover/prover-client';
-import { Prover } from '../src/prover/prover';
-import { SuperlightClient } from '../src/client/superlight-client';
-import { LightClient } from '../src/client/light-client';
-import { Benchmark } from '../src/benchmark';
+import { BeaconStoreVerifier } from '../src/store/beacon-store.js';
+import { ProverClient } from '../src/prover/prover-client.js';
+import { Prover } from '../src/prover/prover.js';
+import { SuperlightClient } from '../src/client/superlight-client.js';
+import { LightClient } from '../src/client/light-client.js';
+import { Benchmark } from '../src/benchmark.js';
 
 // Before running this script two prover servers must be started
 // On port 3678 a dishonest node
@@ -15,8 +14,6 @@ const proverUrls = [
 ];
 
 async function main() {
-  await init('blst-native');
-
   const beaconStoreVerifer = new BeaconStoreVerifier();
 
   // Superlight Client

@@ -1,31 +1,37 @@
-import { ssz, altair } from '@chainsafe/lodestar-types';
+import * as altair from '@lodestar/types/altair';
+import * as phase0 from '@lodestar/types/phase0';
 import { digest } from '@chainsafe/as-sha256';
 import {
   defaultChainConfig,
   createIBeaconConfig,
   IBeaconConfig,
-} from '@chainsafe/lodestar-config';
-import { PublicKey } from '@chainsafe/bls';
-import { ListCompositeType } from '@chainsafe/ssz';
-import { computeSyncPeriodAtSlot } from '@chainsafe/lodestar-light-client/lib/utils/clock';
-import { assertValidLightClientUpdate } from '@chainsafe/lodestar-light-client/lib/validation';
-import { SyncCommitteeFast } from '@chainsafe/lodestar-light-client/lib/types';
-import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store';
-import { BEACON_GENESIS_ROOT } from './constants';
-import * as GenesisSnapshotJson from './data/beacon-genesis-snapshot.json';
+} from '@lodestar/config';
+import { PublicKey } from '@chainsafe/bls/blst-native';
+import { ListCompositeType, fromHexString, toHexString } from '@chainsafe/ssz';
+import { computeSyncPeriodAtSlot, getCurrentSlot } from '@lodestar/light-client/utils';
+import { assertValidLightClientUpdate, assertValidSignedHeader } from '@lodestar/light-client/validation';
+import { SyncCommitteeFast } from '@lodestar/light-client/types';
+import { routes } from "@lodestar/api";
+import { ISyncStoreProver, ISyncStoreVerifer } from './isync-store.js';
+import { BEACON_GENESIS_VALIDATOR_ROOT, BEACON_SYNC_SUPER_MAJORITY } from './constants.js';
 import {
   isUint8ArrayEq,
   isCommitteeSame,
   getRandomInt,
   generateRandomSyncCommittee,
   concatUint8Array,
-} from '../utils';
+} from '../utils.js';
+
+import GenesisSnapshotJson from './data/beacon-genesis-snapshot.json' assert { type: 'json' };
+import BeaconSyncUpdates from './data/beacon-sync-updates.json' assert { type: 'json' };
 
 const currentBeaconPeriod = computeSyncPeriodAtSlot(
-  defaultChainConfig,
   parseInt(GenesisSnapshotJson.currentSlot),
 );
 
+const mainnetConfig = createIBeaconConfig(defaultChainConfig, fromHexString(BEACON_GENESIS_VALIDATOR_ROOT));
+
+type OptimisticUpdate = routes.events.LightclientOptimisticHeaderUpdate;
 // TODO: fix types
 type BeaconUpdate = any;
 
@@ -37,18 +43,15 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   constructor(
     // This is required for testing purpose to make dishonest clients
     public honest: boolean = true,
-    syncUpdatesJson: any[] = require('./data/beacon-sync-updates.json'),
+    syncUpdatesJson: any[] = BeaconSyncUpdates as any,
     genesisSnapshotJson: any = GenesisSnapshotJson,
   ) {
     this.syncUpdates = syncUpdatesJson.map(u =>
-      ssz.altair.LightClientUpdate.fromJson(u),
+      altair.ssz.LightClientUpdate.fromJson(u),
     );
     const genesisSnapshot =
-      ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
-    this.startPeriod = computeSyncPeriodAtSlot(
-      defaultChainConfig,
-      genesisSnapshot.header.slot,
-    );
+      altair.ssz.LightClientSnapshot.fromJson(genesisSnapshotJson);
+    this.startPeriod = computeSyncPeriodAtSlot(genesisSnapshot.header.slot);
 
     // The nextSyncCommittee from the last update is not considered
     // as that is the sync committee in the upcomming period
@@ -113,7 +116,7 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
   updatesToBytes(update: BeaconUpdate[], maxItems: number): Uint8Array {
     // TODO: check the reason for type error
     return new ListCompositeType(
-      ssz.altair.LightClientUpdate as any,
+      altair.ssz.LightClientUpdate as any,
       maxItems,
     ).serialize(update);
   }
@@ -121,29 +124,18 @@ export class BeaconStoreProver implements ISyncStoreProver<BeaconUpdate> {
 
 // TODO: fix types
 export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
-  beaconConfig: IBeaconConfig;
   genesisSyncCommittee: Uint8Array[];
   genesisPeriod: number;
 
   constructor(
-    protected currentPeriod = currentBeaconPeriod,
-    genesisSnapshotJson: any = GenesisSnapshotJson,
+    genesisCommitteePKs: string[] = GenesisSnapshotJson.current_sync_committee.pubkeys,
+    genesisSlot: number = parseInt(GenesisSnapshotJson.header.slot),
+    protected genesisTime?: number,
+    protected chainConfig: IBeaconConfig = mainnetConfig,
+    protected currentPeriod: number = currentBeaconPeriod,
   ) {
-    this.beaconConfig = createIBeaconConfig(
-      defaultChainConfig,
-      BEACON_GENESIS_ROOT,
-    );
-
-    const genesisSnapshot =
-      ssz.altair.LightClientSnapshot.fromJson(genesisSnapshotJson);
-    this.genesisSyncCommittee = Array.from(
-      genesisSnapshot.currentSyncCommittee.pubkeys,
-    ) as Uint8Array[];
-
-    this.genesisPeriod = computeSyncPeriodAtSlot(
-      defaultChainConfig,
-      genesisSnapshot.header.slot,
-    );
+    this.genesisSyncCommittee = genesisCommitteePKs.map(pk => fromHexString(pk));
+    this.genesisPeriod = computeSyncPeriodAtSlot(genesisSlot);
   }
 
   getCommitteeHash(committee: Uint8Array[]): Uint8Array {
@@ -176,12 +168,13 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     try {
       // check if the update has valid signatures
       assertValidLightClientUpdate(
-        this.beaconConfig,
+        this.chainConfig,
         prevCommitteeFast,
         update,
       );
       return update.nextSyncCommittee.pubkeys;
     } catch (e) {
+      console.error(e);
       return false;
     }
   }
@@ -202,7 +195,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     try {
       // check if the update has valid signatures
       assertValidLightClientUpdate(
-        this.beaconConfig,
+        this.chainConfig,
         prevCommitteeFast,
         update,
       );
@@ -212,12 +205,54 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
     }
   }
 
+  optimisticUpdateFromJSON(
+    update: any
+  ): OptimisticUpdate {
+    return {
+      syncAggregate: altair.ssz.SyncAggregate.fromJson(update.sync_aggregate),
+      attestedHeader: phase0.ssz.BeaconBlockHeader.fromJson(update.attested_header),
+    };
+  }
+
+  optimisticUpdateVerify(
+    committee: Uint8Array[],
+    update: OptimisticUpdate
+  ): boolean {
+    const {attestedHeader: header, syncAggregate} = update;
+
+    // TODO: fix this
+    // Prevent registering updates for slots to far ahead
+    // if (header.slot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
+    //   throw Error(`header.slot ${header.slot} is too far in the future, currentSlot: ${this.currentSlot}`);
+    // }
+
+    const period = computeSyncPeriodAtSlot(header.slot);
+    const headerBlockRoot = phase0.ssz.BeaconBlockHeader.hashTreeRoot(header);
+    const headerBlockRootHex = toHexString(headerBlockRoot);
+    const committeeFast = this.deserializeSyncCommittee(committee);
+    try{
+      assertValidSignedHeader(this.chainConfig, committeeFast, syncAggregate, headerBlockRoot, header.slot);
+    } catch(e) {
+      return false;
+    }
+
+    const participation = syncAggregate.syncCommitteeBits.getTrueBitIndexes().length;
+    if (participation < BEACON_SYNC_SUPER_MAJORITY) {
+      return false;
+    }
+    return true;
+  }
+
   getGenesisSyncCommittee(): Uint8Array[] {
     return this.genesisSyncCommittee;
   }
 
   getCurrentPeriod(): number {
-    return this.currentPeriod;
+    if(this.genesisTime) {
+      return computeSyncPeriodAtSlot(getCurrentSlot(this.chainConfig, this.genesisTime));
+    }
+    else 
+      return this.currentPeriod;
   }
 
   getGenesisPeriod(): number {
@@ -227,7 +262,7 @@ export class BeaconStoreVerifier implements ISyncStoreVerifer<BeaconUpdate> {
   updatesFromBytes(bytesUpdates: Uint8Array, maxItems: number): BeaconUpdate[] {
     // TODO: check the reason for type error
     return new ListCompositeType(
-      ssz.altair.LightClientUpdate as any,
+      altair.ssz.LightClientUpdate as any,
       maxItems,
     ).deserialize(bytesUpdates);
   }

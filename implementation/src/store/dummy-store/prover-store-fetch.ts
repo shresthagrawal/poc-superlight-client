@@ -1,7 +1,7 @@
-import { handleHTTPSRequest, getRandomInt } from '../../utils';
-import { ResourceURL } from './types';
-import { DummyStoreProver } from './prover-store';
-import { getChainInfoSSZ } from './ssz';
+import { handleHTTPSRequest, getRandomInt } from '../../utils.js';
+import { ResourceURL } from './types.js';
+import { DummyStoreProver } from './prover-store.js';
+import { getChainInfoSSZ } from './ssz.js';
 
 export class DummyStoreFetchProver extends DummyStoreProver {
   constructor(

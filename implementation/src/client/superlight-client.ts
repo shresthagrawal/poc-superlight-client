@@ -4,12 +4,12 @@ import {
   isUint8ArrayEq,
   smallHexStr,
   isCommitteeSame,
-  logFloor
-} from '../utils';
-import { MerkleVerify } from '../merkle-tree';
-import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range';
-import { ISyncStoreVerifer } from '../store/isync-store';
-import { IProver } from '../prover/iprover';
+  logFloor,
+} from '../utils.js';
+import { MerkleVerify } from '../merkle-tree.js';
+import { MerkleMountainVerify, Peaks } from '../merkle-mountain-range.js';
+import { ISyncStoreVerifer } from '../store/isync-store.js';
+import { IProver } from '../prover/iprover.js';
 
 export type ProverInfo = {
   root: Uint8Array;
@@ -137,20 +137,15 @@ export class SuperlightClient<T> {
     if (stepsToLeafs === 0) {
       console.log(`Found first point of disagreement at index(${index})`);
       return index;
-
     } else {
       // get node info
       const nodeInfo1 = await prover1.getNode(tree1, node1);
       const nodeInfo2 = await prover2.getNode(tree2, node2);
 
       const children1 = nodeInfo1.children!;
-      console.log(
-        `Compare node1(${smallHexStr(node1)})`,
-      );
+      console.log(`Compare node1(${smallHexStr(node1)})`);
       const children2 = nodeInfo2.children!;
-      console.log(
-        `Compare node2(${smallHexStr(node2)})`,
-      );
+      console.log(`Compare node2(${smallHexStr(node2)})`);
       // check the children are correct
       const parentHash1 = digest(concatUint8Array(children1));
       if (children1.length !== this.n || !isUint8ArrayEq(parentHash1, node1))
@@ -300,10 +295,12 @@ export class SuperlightClient<T> {
         winner.peaks,
       );
       if (syncCommittee) {
-        return [{
-          ...winner,
-          syncCommittee,
-        }];
+        return [
+          {
+            ...winner,
+            syncCommittee,
+          },
+        ];
       }
     }
     throw new Error('all winners cheated');

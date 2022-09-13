@@ -1,20 +1,20 @@
 import { digest } from '@chainsafe/as-sha256';
-import { PublicKey, SecretKey, Signature } from '@chainsafe/bls';
+import { SecretKey, Signature } from '@chainsafe/bls/blst-native';
 import { ContainerType } from '@chainsafe/ssz';
 import {
   DummyHeader,
   DummyUpdate,
   DummyUpdateRaw,
   CommitteeChainInfo,
-} from './types';
+} from './types.js';
 import {
   RandomBytesGenerator,
   concatUint8Array,
   numberToUint8Array,
   isUint8ArrayEq,
   getRandomInt,
-} from '../../utils';
-import { getUpdateSSZ } from './ssz';
+} from '../../utils.js';
+import { getUpdateSSZ } from './ssz.js';
 
 export function hashHeader(header: DummyHeader): Uint8Array {
   return digest(
@@ -49,7 +49,8 @@ export function generateChain(
           .generateArray(32, committeeSize)
           .map(entropy => SecretKey.fromKeygen(entropy))
       : new Array(committeeSize).fill(null).map(i => SecretKey.fromKeygen());
-  const getCommitteeFromPK = (cPK: SecretKey[]) =>
+  // TODO: fix type
+  const getCommitteeFromPK = (cPK: any[]) =>
     cPK.map(pk => pk.toPublicKey().toBytes());
   const getCommitteeHash = (c: Uint8Array[]) => digest(concatUint8Array(c));
 

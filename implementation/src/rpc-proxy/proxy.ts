@@ -1,0 +1,136 @@
+import * as dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
+import axios from 'axios';
+import bodyParser from 'body-parser';
+import {
+  JSONRPCServer,
+  createJSONRPCErrorResponse,
+  JSONRPCServerMiddleware,
+} from 'json-rpc-2.0';
+import Web3 from 'web3';
+import { ClientManager } from './client-manager.js';
+import { VerifiedProvider } from './verified-provider.js';
+import { RPCTx } from './types.js';
+import { INTERNAL_ERROR } from './constants.js';
+
+const RPC_URL = process.env.RPC_URL || '';
+const BEACON_CHAIN_API_URL = process.env.BEACON_CHAIN_API_URL || '';
+const CHAIN_ID = parseInt(process.env.CHAIN_ID || '1') 
+
+async function getApp() {
+  const server = new JSONRPCServer();
+  const app = express();
+  
+  const cm = new ClientManager([], BEACON_CHAIN_API_URL, RPC_URL, CHAIN_ID);
+  await cm.setup();
+  const provider = await cm.sync();
+
+  server.addMethod(
+    'eth_getBalance',
+    async ([address, blockNumber]: [string, string]) => {
+      return await provider.getBalance(address, blockNumber);
+    },
+  );
+
+  server.addMethod('eth_blockNumber', () => {
+    return provider.blockNumber();
+  });
+
+  server.addMethod('eth_chainId', () => {
+    return provider.chainId();
+  });
+
+  server.addMethod(
+    'eth_getTransactionCount',
+    async ([address, blockNumber]: [string, string]) => {
+      return await provider.getTransactionCount(address, blockNumber);
+    },
+  );
+
+  server.addMethod(
+    'eth_getCode',
+    async ([address, blockNumber]: [string, string]) => {
+      return await provider.getCode(address, blockNumber);
+    },
+  );
+
+  server.addMethod(
+    'eth_getBlockByNumber',
+    async ([blockNumber, includeTx]: [string, boolean]) => {
+      return await provider.getBlockByNumber(blockNumber, includeTx);
+    },
+  );
+
+  server.addMethod(
+    'eth_getBlockByHash',
+    async ([blockHash, includeTx]: [string, boolean]) => {
+      return await provider.getBlockByHash(blockHash, includeTx);
+    },
+  );
+
+  server.addMethod('eth_call', async ([tx, blockNumber]: [RPCTx, string]) => {
+    return await provider.call(tx, blockNumber);
+  });
+
+  server.addMethod(
+    'eth_estimateGas',
+    async ([tx, blockNumber]: [RPCTx, string]) => {
+      return await provider.estimateGas(tx, blockNumber);
+    },
+  );
+
+  server.addMethod('eth_sendRawTransaction', async ([tx]: [string]) => {
+    return await provider.sendRawTransaction(tx);
+  });
+
+  server.addMethod('net_version', async () => {
+    return BigInt(provider.chainId()).toString();
+  });
+
+  const exceptionMiddleware: JSONRPCServerMiddleware<void> = async (
+    next,
+    request,
+    serverParams,
+  ) => {
+    try {
+      console.log(`RPC Request ${request.method}`);
+      return await next(request, serverParams);
+    } catch (error) {
+      console.log(error);
+      if (error.code) {
+        return error;
+      } else {
+        return {
+          message: error.message,
+          code: INTERNAL_ERROR,
+        };
+      }
+    }
+  };
+
+  server.applyMiddleware(exceptionMiddleware);
+
+  app.use(bodyParser.json());
+  app.post('/', async (req, res) => {
+    const jsonRPCRequest = req.body;
+    server.receive(jsonRPCRequest).then(jsonRPCResponse => {
+      if (jsonRPCResponse) {
+        console.log(jsonRPCResponse);
+        res.json(jsonRPCResponse);
+      } else {
+        res.sendStatus(204);
+      }
+    });
+  });
+
+  return app;
+}
+
+async function main() {
+  const app = await getApp();
+  app.listen(80);
+}
+
+main();

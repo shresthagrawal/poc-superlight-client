@@ -1,6 +1,6 @@
-import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils';
-import { ISyncStoreVerifer } from '../store/isync-store';
-import { IProver } from '../prover/iprover';
+import { concatUint8Array, isUint8ArrayEq, smallHexStr } from '../utils.js';
+import { ISyncStoreVerifer } from '../store/isync-store.js';
+import { IProver } from '../prover/iprover.js';
 
 export type ProverInfo = {
   syncCommitteeHash: Uint8Array;
@@ -161,14 +161,14 @@ export class OptimisticLightClient<T> {
       index: i,
       syncCommitteeHash: new Uint8Array(),
     }));
-    
-    for(let period = startPeriod; period < currentPeriod; period++) {
+
+    for (let period = startPeriod; period < currentPeriod; period++) {
       const committeeHashes: Uint8Array[] = await Promise.all(
         proverInfos.map(pi =>
           this.provers[pi.index].getLeafHash(period, this.batchSize),
         ),
       );
-      
+
       let foundConflict = false;
       for (let j = 0; j < committeeHashes.length; j++) {
         if (!isUint8ArrayEq(committeeHashes[j], committeeHashes[0])) {
@@ -189,7 +189,7 @@ export class OptimisticLightClient<T> {
           lastCommitteeHash,
         );
         if (proverInfos.length < 2) break;
-      } 
+      }
       lastCommitteeHash = proverInfos[0].syncCommitteeHash;
     }
 

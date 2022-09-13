@@ -1,17 +1,19 @@
-import * as express from 'express';
-import { init } from '@chainsafe/bls';
-import { BeaconStoreProver } from '../store/beacon-store';
-import { DummyStoreProver, DummyStoreFetchProver } from '../store/dummy-store';
-import { ISyncStoreProver } from '../store/isync-store';
-import { Prover } from './prover';
+import express from 'express';
 import { fromHexString } from '@chainsafe/ssz';
+import { BeaconStoreProver } from '../store/beacon-store.js';
+import {
+  DummyStoreProver,
+  DummyStoreFetchProver,
+} from '../store/dummy-store/index.js';
+import { ISyncStoreProver } from '../store/isync-store.js';
+import { Prover } from './prover.js';
 import {
   LeafWithProofSSZ,
   MMRInfoSSZ,
   NodeSSZ,
   LeafHashesSSZ,
   CommitteeSSZ,
-} from './ssz-types';
+} from './ssz-types.js';
 
 const isHonest = process.env.HONEST !== 'false';
 const isDummy = process.env.DUMMY === 'true';
@@ -33,7 +35,6 @@ class ProverSetup {
   store: ISyncStoreProver<any> | null = null;
 
   async init() {
-    await init('blst-native');
     setImmediate(async () => {
       this.store = fetchChainInfo
         ? new DummyStoreFetchProver(
