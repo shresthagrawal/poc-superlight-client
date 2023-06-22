@@ -1,6 +1,6 @@
 ### Superlight Client For Ethereum Proof of Stake
 
-This is a PoC implementation for **Superlight Client for Ethereum**. The light client specified by the Ethereum PoS Consesnsus takes linear storage/time complexity w.r.t to the chain size to sync. The superlight client proposed in this repo can sync to the latest header in poly log complexity which is exponentially better that the state of art. This is acheived based on interactive bisections games. 
+This is a PoC implementation for **Superlight Client for Ethereum**. The light client specified by the Ethereum PoS Consensus takes linear storage/time complexity w.r.t to the chain size to sync. The superlight client proposed in this repo can sync to the latest header in poly log complexity which is exponentially better that the state of art. This is acheived based on interactive bisections games. 
 
 This repo serves as an implementation for the Bachelors Thesis by Shresth Agrawal. The protocol implemented in this repo is an extention to an unpublished work by Dionysis Zindros called **"Proofs of Proof of Stake in Sublinear Complexity"**. 
 
